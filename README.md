@@ -100,7 +100,7 @@ ithera/
 |------|-----------|
 | `main` | Código estable para entrega. **CERO commits directos.** |
 | `develop` | Integración. Todo PR aprobado converge aquí. |
-| `feature/nombre` | Nueva funcionalidad o tarea de Sprint. |
+| `feature/nombre` | Nueva funcionalidad o tarea de Sprint. - Seguir formato de nombre de ramas |
 | `hotfix/nombre` | Fix urgente sobre `main`. |
 | `release/vX.X` | Freeze para entrega académica. |
 
