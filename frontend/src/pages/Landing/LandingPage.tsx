@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Logo } from '../../components/ui/Logo'
-import { Navbar } from '../../components/layout/Navbar/Navbar'
+import { Navbar } from '../../components/layout/Navbar'
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 
@@ -668,7 +668,7 @@ function Footer() {
 export function LandingPage() {
   return (
     <div className="font-body">
-      <Navbar />
+      <Navbar variant="landing" />
       <HeroSection />
       <StatsSection />
       <FeaturesSection />

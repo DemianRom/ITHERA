@@ -27,6 +27,8 @@ export default {
         gray500:       '#7A8799',
         redError:      '#EF4444',
         amber:         '#F59E0B',
+        surface:       '#F0EEF8',
+        'surface-light': '#FAF9FD',
       },
       borderRadius: {
         lg: '12px',
