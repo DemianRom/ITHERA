@@ -24,4 +24,11 @@ body {
   .bg-page {
     background-color: #F4F6F8;
   }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

@@ -9,7 +9,7 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="flex flex-col min-h-screen bg-[#F4F6F8] font-sans">
-      <Navbar />
+      <Navbar variant="landing" />
       
       <main className="flex-grow flex flex-col relative">
         {children}
