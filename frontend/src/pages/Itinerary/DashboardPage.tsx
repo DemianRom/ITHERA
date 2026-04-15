@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Navbar } from '../../components/layout/Navbar'
+import { DayView } from '../../components/ui/DayView'
+import type { Activity as DayActivity, DayViewHandle } from '../../components/ui/DayView'
+import { ITINERARY_DAYS } from '../../mock/itinerary.mock'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -279,12 +282,18 @@ function getSectionLabel(category: Activity['category'], hasPending?: boolean) {
 // ── LeftSidebar ───────────────────────────────────────────────────────────────
 
 interface LeftSidebarProps {
-  activeDay: number
+  activeDay: number | null
+  showDaySelector: boolean
   onDayChange: (day: number) => void
+  onToggleDaySelector: () => void
   isOpen: boolean
 }
 
-function LeftSidebar({ activeDay, onDayChange, isOpen }: LeftSidebarProps) {
+function LeftSidebar({ activeDay, showDaySelector, onDayChange, onToggleDaySelector, isOpen }: LeftSidebarProps) {
+  const activeItineraryDay = activeDay !== null
+    ? ITINERARY_DAYS.find((d) => d.dayNumber === activeDay) ?? null
+    : null
+
   return (
     <aside
       className={[
@@ -313,39 +322,92 @@ function LeftSidebar({ activeDay, onDayChange, isOpen }: LeftSidebarProps) {
 
       {/* Itinerary section */}
       <p className="font-body text-[10px] text-white/40 uppercase tracking-widest mb-2">Itinerario</p>
-      <ul className="flex flex-col gap-1 mb-5">
-        {DAYS.map((day) => {
-          const isActive = day.id === activeDay
-          return (
-            <li key={day.id}>
-              <button
-                onClick={() => onDayChange(day.id)}
-                className={[
-                  'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors duration-150',
-                  isActive
-                    ? 'bg-bluePrimary'
-                    : 'hover:bg-white/10',
-                ].join(' ')}
-              >
-                <div>
-                  <p className={`font-body text-sm font-${isActive ? 'bold' : 'normal'} ${isActive ? 'text-white' : 'text-white/60'} leading-none`}>
-                    {day.label}
-                  </p>
-                  <p className={`font-body text-xs mt-0.5 ${isActive ? 'text-white/70' : 'text-white/40'} leading-none`}>
-                    {day.shortDate} · {day.activityCount} actividades
-                  </p>
-                </div>
-                {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />
-                )}
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+
+      {/* ── Toggle button "Ver todos los días" ── */}
+      <button
+        onClick={onToggleDaySelector}
+        className="w-full flex items-center justify-between bg-white/10 rounded-xl px-4 py-2.5 mb-2 transition-all duration-200 hover:bg-white/15"
+      >
+        <span className="font-body text-[13px] text-white/70">Ver todos los días</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+          className={`text-white/50 transition-transform duration-200 ${showDaySelector ? 'rotate-180' : ''}`}
+        >
+          <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {/* ── Expandable day list ── */}
+      <div
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ maxHeight: showDaySelector ? '600px' : 0 }}
+      >
+        <ul className="flex flex-col gap-1 mb-2">
+          {ITINERARY_DAYS.map((day) => {
+            const isActive = day.dayNumber === activeDay
+            const count    = day.activities.length
+            return (
+              <li key={day.dayNumber}>
+                <button
+                  onClick={() => onDayChange(day.dayNumber)}
+                  className={[
+                    'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all duration-200',
+                    isActive ? 'bg-bluePrimary' : 'hover:bg-white/10',
+                  ].join(' ')}
+                >
+                  <div>
+                    <p className={`font-body text-[13px] ${isActive ? 'font-bold text-white' : 'font-normal text-white/60'} leading-none`}>
+                      Día {day.dayNumber}
+                    </p>
+                    <p className={`font-body text-xs mt-0.5 leading-none ${isActive ? 'text-white/70' : 'text-white/40'}`}>
+                      {day.date} · {count} actividad{count !== 1 ? 'es' : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`font-body text-xs ${isActive ? 'text-white/70' : 'text-white/40'}`}>
+                      {count}
+                    </span>
+                    {isActive && (
+                      <span className="w-2 h-2 rounded-full bg-greenAccent shrink-0" />
+                    )}
+                  </div>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+
+      {/* ── Active day pill (when selector is closed and a day is selected) ── */}
+      {!showDaySelector && activeItineraryDay !== null && (
+        <div className="flex items-center justify-between bg-bluePrimary rounded-xl px-3 py-2.5 mb-2">
+          <div>
+            <p className="font-body text-[13px] font-bold text-white leading-none">
+              Día {activeItineraryDay.dayNumber}
+            </p>
+            <p className="font-body text-xs text-white/70 mt-0.5 leading-none">
+              {activeItineraryDay.date}
+            </p>
+          </div>
+          <button
+            onClick={() => onDayChange(activeItineraryDay.dayNumber)}
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors shrink-0"
+            aria-label="Deseleccionar día"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Divider */}
-      <div className="border-t border-white/10 mb-4" />
+      <div className="border-t border-white/10 mb-4 mt-3" />
 
       {/* Budget */}
       <p className="font-body text-[10px] text-white/40 uppercase tracking-widest mb-2">Presupuesto Grupal</p>
@@ -378,7 +440,7 @@ function LeftSidebar({ activeDay, onDayChange, isOpen }: LeftSidebarProps) {
 // ── HeroCard ──────────────────────────────────────────────────────────────────
 
 interface HeroCardProps {
-  activeDay: number
+  activeDay: number | null
 }
 
 function HeroCard({ activeDay }: HeroCardProps) {
@@ -396,7 +458,7 @@ function HeroCard({ activeDay }: HeroCardProps) {
       {/* Top badges */}
       <div className="absolute top-4 left-4 flex gap-2">
         <span className="font-body text-[11px] font-bold text-white bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
-          DÍA {activeDay} / 4
+          {activeDay !== null ? `DÍA ${activeDay} / 4` : 'CANCÚN 2025'}
         </span>
         <span className="font-body text-[11px] font-bold text-white bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
           16 JUNIO 2025
@@ -429,40 +491,109 @@ function HeroCard({ activeDay }: HeroCardProps) {
 // ── TimelineStrip ─────────────────────────────────────────────────────────────
 
 interface TimelineStripProps {
-  activeDay: number
-  onDayChange: (day: number) => void
+  activeDay: number | null
+  date?: string
+  activities?: DayActivity[]
 }
 
-function TimelineStrip({ activeDay, onDayChange }: TimelineStripProps) {
-  return (
-    <div className="bg-white rounded-2xl border border-[#E2E8F0] px-4 py-3 mb-4">
-      <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
-        {DAYS.map((day) => {
-          const isActive = day.id === activeDay
-          return (
-            <button
-              key={day.id}
-              onClick={() => onDayChange(day.id)}
-              className={[
-                'shrink-0 flex flex-col items-center px-4 py-2 rounded-xl transition-colors duration-150 min-w-[72px]',
-                isActive
-                  ? 'bg-bluePrimary text-white'
-                  : 'bg-white border border-[#E2E8F0] text-gray700 hover:border-bluePrimary/50',
-              ].join(' ')}
-            >
-              <span className={`font-body text-[11px] font-bold leading-none ${isActive ? 'text-white' : 'text-gray500'}`}>
-                {day.shortDate}
-              </span>
-              <span className={`font-heading font-bold text-sm leading-none mt-0.5 ${isActive ? 'text-white' : 'text-gray700'}`}>
-                {day.label}
-              </span>
-              <span className={`font-body text-[11px] leading-none mt-0.5 ${isActive ? 'text-white/70' : 'text-gray500'}`}>
-                {day.activityCount} act.
-              </span>
-            </button>
-          )
-        })}
+function TimelineStrip({ activeDay, date, activities = [] }: TimelineStripProps) {
+  const confirmed  = activities.filter((a) => a.status === 'confirmada').length
+  const pending    = activities.filter((a) => a.status === 'pendiente').length
+  const total      = activities.length
+  const pct        = total > 0 ? Math.round((confirmed / total) * 100) : 0
+
+  const transport  = activities.filter((a) => a.category === 'transporte').length
+  const lodging    = activities.filter((a) => a.category === 'hospedaje').length
+  const acts       = activities.filter((a) => a.category === 'actividad').length
+
+  /* ── No day selected ── */
+  if (activeDay === null) {
+    return (
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] px-5 py-5 mb-4 flex flex-col items-center justify-center gap-2">
+        <div className="w-10 h-10 rounded-xl bg-bluePrimary/10 flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-bluePrimary" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+            <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+        </div>
+        <p className="font-body text-sm text-gray500 text-center">
+          Selecciona un día para ver su progreso
+        </p>
       </div>
+    )
+  }
+
+  /* ── Day selected ── */
+  return (
+    <div className="bg-white rounded-2xl border border-[#E2E8F0] px-5 py-4 mb-4">
+      {/* Top row: left meta + right progress bar */}
+      <div className="flex items-start gap-5">
+        {/* Left column */}
+        <div className="shrink-0">
+          <span className="inline-flex font-body text-[11px] font-bold text-bluePrimary bg-bluePrimary/10 rounded-full px-3 py-1 leading-none">
+            DÍA {activeDay}{date ? ` · ${date.toUpperCase()}` : ''}
+          </span>
+          <p className="font-heading font-bold text-purpleNavbar text-sm mt-2 leading-none">
+            Progreso del día
+          </p>
+          <p className="font-body text-xs text-gray500 mt-1 leading-none">
+            {confirmed} de {total} actividades confirmadas
+          </p>
+        </div>
+
+        {/* Right column */}
+        <div className="flex-1 pt-0.5">
+          {/* Progress bar */}
+          <div className="bg-surface rounded-full h-3 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${pct}%`,
+                background: 'linear-gradient(90deg, #1E6FD9, #35C56A)',
+              }}
+            />
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+            <span className="flex items-center gap-1.5 font-body text-[11px] text-gray500">
+              <span className="w-2 h-2 rounded-full bg-greenAccent shrink-0" />
+              Confirmadas · {confirmed}
+            </span>
+            <span className="flex items-center gap-1.5 font-body text-[11px] text-gray500">
+              <span className="w-2 h-2 rounded-full bg-purpleMedium shrink-0" />
+              Por confirmar · {pending}
+            </span>
+            <span className="flex items-center gap-1.5 font-body text-[11px] text-gray500">
+              <span className="w-2 h-2 rounded-full bg-[#E2E8F0] shrink-0" />
+              Sin actividades · {total === 0 ? 1 : 0}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Category chips */}
+      {(transport > 0 || lodging > 0 || acts > 0) && (
+        <div className="flex flex-wrap gap-2 mt-3">
+          {transport > 0 && (
+            <span className="font-body text-[11px] text-bluePrimary bg-[#EEF4FF] rounded-full px-3 py-1 leading-none">
+              ✈ {transport} traslado{transport !== 1 ? 's' : ''}
+            </span>
+          )}
+          {lodging > 0 && (
+            <span className="font-body text-[11px] text-bluePrimary bg-[#EEF4FF] rounded-full px-3 py-1 leading-none">
+              🏨 {lodging} hospedaje{lodging !== 1 ? 's' : ''}
+            </span>
+          )}
+          {acts > 0 && (
+            <span className="font-body text-[11px] text-purpleMedium bg-surface rounded-full px-3 py-1 leading-none">
+              ⭐ {acts} actividad{acts !== 1 ? 'es' : ''}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -1071,13 +1202,27 @@ function ActivitiesContent({ activities, onAccept, onDelete }: ActivitiesContent
 // ── DashboardPage ─────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
-  const [activeDay,    setActiveDay]    = useState(1)
-  const [activeTab,    setActiveTab]    = useState('pagar')
-  const [isLoading,    setIsLoading]    = useState(false)
-  const [activities,   setActivities]   = useState<Activity[]>(ACTIVITIES)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES)
-  const [chatInput,    setChatInput]    = useState('')
-  const [sidebarOpen,  setSidebarOpen]  = useState(() => window.innerWidth >= 1024)
+  const [activeDay,        setActiveDay]        = useState<number | null>(null)
+  const [showDaySelector,  setShowDaySelector]  = useState(false)
+  const [activeTab,        setActiveTab]        = useState('pagar')
+  const [isLoading,        setIsLoading]        = useState(false)
+  const [activities,       setActivities]       = useState<Activity[]>(ACTIVITIES)
+  const [chatMessages,     setChatMessages]     = useState<ChatMessage[]>(INITIAL_MESSAGES)
+  const [chatInput,        setChatInput]        = useState('')
+  const [sidebarOpen,      setSidebarOpen]      = useState(() => window.innerWidth >= 1024)
+
+  const dayRefs = useRef<Record<number, DayViewHandle | null>>({})
+
+  const handleDayChange = useCallback((dayNumber: number) => {
+    setActiveDay((prev) => {
+      const next = prev === dayNumber ? null : dayNumber
+      if (next !== null) {
+        setShowDaySelector(false)
+        setTimeout(() => dayRefs.current[next]?.scrollIntoView(), 60)
+      }
+      return next
+    })
+  }, [])
 
   const isEmpty = activities.length === 0
 
@@ -1121,7 +1266,13 @@ export function DashboardPage() {
       {/* Main layout — three columns */}
       <div className="flex flex-1 overflow-hidden pt-20">
         {/* ── Left sidebar ── */}
-        <LeftSidebar activeDay={activeDay} onDayChange={setActiveDay} isOpen={sidebarOpen} />
+        <LeftSidebar
+          activeDay={activeDay}
+          showDaySelector={showDaySelector}
+          onDayChange={handleDayChange}
+          onToggleDaySelector={() => setShowDaySelector((v) => !v)}
+          isOpen={sidebarOpen}
+        />
 
         {/* ── Central content ── */}
         <main className="flex-1 flex flex-col overflow-hidden">
@@ -1133,12 +1284,25 @@ export function DashboardPage() {
             <div className="flex-1 overflow-y-auto px-6 py-6 bg-surface">
               <HeroCard activeDay={activeDay} />
               <InfoBanner />
-              <TimelineStrip activeDay={activeDay} onDayChange={setActiveDay} />
-              <ActivitiesContent
-                activities={activities}
-                onAccept={handleAccept}
-                onDelete={handleDelete}
+              <TimelineStrip
+                activeDay={activeDay}
+                date={activeDay !== null ? ITINERARY_DAYS.find((d) => d.dayNumber === activeDay)?.date : undefined}
+                activities={activeDay !== null ? ITINERARY_DAYS.find((d) => d.dayNumber === activeDay)?.activities : undefined}
               />
+              <div className="flex flex-col gap-3">
+                {ITINERARY_DAYS.map((day) => (
+                  <DayView
+                    key={day.dayNumber}
+                    ref={(handle) => { dayRefs.current[day.dayNumber] = handle }}
+                    dayNumber={day.dayNumber}
+                    date={day.date}
+                    activities={day.activities}
+                    isActive={day.dayNumber === activeDay}
+                    isExpanded={activeDay !== null && day.dayNumber === activeDay}
+                    onSelect={handleDayChange}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
