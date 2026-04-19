@@ -299,21 +299,19 @@ function BottomNavbar({
 }
 
 export function DashboardPage() {
-  const [activeDay, setActiveDay] = useState<number | null>(null)
-  const [showDaySelector, setShowDaySelector] = useState(false)
-  const [activeTab, setActiveTab] = useState('pagar')
-  const [isLoading, setIsLoading] = useState(false)
+  const [activeDay,   setActiveDay]   = useState<number | null>(null)
+  const [expandedDay, setExpandedDay] = useState<number | null>(null)
+  const [activeTab,   setActiveTab]   = useState('pagar')
+  const [isLoading,   setIsLoading]   = useState(false)
+
   const dayRefs = useRef<Record<number, DayViewHandle | null>>({})
 
   const handleDayChange = useCallback((dayNumber: number) => {
-    setActiveDay((prev) => {
-      const next = prev === dayNumber ? null : dayNumber
-      if (next !== null) {
-        setShowDaySelector(false)
-        setTimeout(() => dayRefs.current[next]?.scrollIntoView(), 60)
-      }
-      return next
-    })
+    setActiveDay((prev) => prev === dayNumber ? null : dayNumber)
+  }, [])
+
+  const handleDayExpand = useCallback((dayNumber: number) => {
+    setExpandedDay((prev) => prev === dayNumber ? null : dayNumber)
   }, [])
 
   const isEmpty = ITINERARY_DAYS.length === 0
@@ -330,9 +328,7 @@ export function DashboardPage() {
       sidebarContent={
         <SidebarDashboard
           activeDay={activeDay}
-          showDaySelector={showDaySelector}
           onDayChange={handleDayChange}
-          onToggleDaySelector={() => setShowDaySelector((value) => !value)}
         />
       }
       rightPanel={<RightPanelDashboard />}
@@ -356,8 +352,9 @@ export function DashboardPage() {
                 dayNumber={day.dayNumber}
                 date={day.date}
                 activities={day.activities}
-                isExpanded={activeDay !== null && day.dayNumber === activeDay}
-                onSelect={handleDayChange}
+                isActive={day.dayNumber === activeDay}
+                isExpanded={day.dayNumber === expandedDay}
+                onSelect={handleDayExpand}
               />
             ))}
           </div>
