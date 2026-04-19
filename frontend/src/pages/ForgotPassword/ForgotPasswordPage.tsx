@@ -409,23 +409,6 @@ function StepSuccess() {
   )
 }
 
-// ── Progress Indicator ────────────────────────────────────────────────────────
-function ProgressDots({ current }: { current: number }) {
-  const steps = ['email', 'code', 'newPassword']
-  const index = steps.indexOf(current as unknown as string)
-
-  return (
-    <div className="flex items-center gap-2 mb-8">
-      {steps.map((_, i) => (
-        <div
-          key={i}
-          className={`h-1.5 rounded-full transition-all duration-300 ${i <= index ? 'bg-[#1E6FD9] flex-1' : 'bg-[#E2E8F0] w-8'}`}
-        />
-      ))}
-    </div>
-  )
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function ForgotPasswordPage() {
   const [step, setStep] = useState<Step>('email')
