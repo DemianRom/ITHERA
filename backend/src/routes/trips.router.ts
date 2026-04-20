@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { requireAuth } from '../middlewares/auth.middleware';
 import * as GroupsService from '../domain/groups/groups.service';
 import { MemberRole } from '../domain/groups/groups.entity';
+import { supabase } from '../infrastructure/db/supabase.client';
 
 const router = Router();
 
@@ -48,7 +49,7 @@ router.get('/my-history', requireAuth, async (req: Request, res: Response): Prom
 router.get('/:groupId/qr', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { groupId } = req.params;
-    const { data: grupo, error } = await (await import('../infrastructure/db/supabase.client')).supabase
+    const { data: grupo, error } = await supabase
       .from('grupos_viaje')
       .select('id, nombre, codigo_invitacion')
       .eq('id', groupId)
@@ -80,8 +81,8 @@ router.get('/:groupId/members', requireAuth, async (req: Request, res: Response)
 router.patch('/members/:memberId/role', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { rol } = req.body as { rol?: string };
-    if (!rol || !['admin', 'colaborador'].includes(rol)) {
-      res.status(400).json({ ok: false, error: 'Rol inválido. Valores permitidos: admin, colaborador' });
+    if (!rol || !['admin', 'viajero'].includes(rol)) {
+      res.status(400).json({ ok: false, error: 'Rol inválido. Valores permitidos: admin, viajero' });
       return;
     }
     const member = await GroupsService.updateMemberRole(req.params.memberId, rol as MemberRole);

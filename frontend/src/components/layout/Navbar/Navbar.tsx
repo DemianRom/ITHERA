@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Logo } from '../../ui/Logo'
+import { useAuth } from '../../../context/useAuth'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -73,6 +75,25 @@ function IconClose() {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
       <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconUser() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconLogout() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -226,8 +247,29 @@ function DashboardNavContent({
   mobileOpen,
   onTripSelect,
   onNotifications,
-  onUserMenu,
 }: DashboardContentProps) {
+  const navigate = useNavigate()
+  const { logout } = useAuth()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [menuOpen])
+
+  async function handleLogout() {
+    setMenuOpen(false)
+    await logout()
+    navigate('/login')
+  }
+
   return (
     <>
       {/* Trip selector — absolutely centered */}
@@ -281,26 +323,50 @@ function DashboardNavContent({
         {/* Divider */}
         <span className="hidden md:block w-px h-5 bg-white/10 mx-1" />
 
-        {/* User info */}
-        <button
-          onClick={onUserMenu}
-          className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/10 transition-colors"
-          aria-label="Menú de usuario"
-        >
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-body font-bold text-xs shrink-0"
-            style={{ backgroundColor: user.color ?? '#1E6FD9' }}
+        {/* User menu */}
+        <div ref={menuRef} className="relative">
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/10 transition-colors"
+            aria-label="Menú de usuario"
+            aria-expanded={menuOpen}
           >
-            {user.initials}
-          </div>
-          <div className="hidden md:flex flex-col items-start">
-            <span className="font-body text-[13px] font-bold text-white leading-tight">{user.name}</span>
-            <span className="font-body text-[11px] text-white/50 leading-tight">{user.role}</span>
-          </div>
-          <span className="hidden md:block text-white/50">
-            <IconChevronDown />
-          </span>
-        </button>
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-body font-bold text-xs shrink-0"
+              style={{ backgroundColor: user.color ?? '#1E6FD9' }}
+            >
+              {user.initials}
+            </div>
+            <div className="hidden md:flex flex-col items-start">
+              <span className="font-body text-[13px] font-bold text-white leading-tight">{user.name}</span>
+              <span className="font-body text-[11px] text-white/50 leading-tight">{user.role}</span>
+            </div>
+            <span className={`hidden md:block text-white/50 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`}>
+              <IconChevronDown />
+            </span>
+          </button>
+
+          {/* Dropdown */}
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-[#E2E8F0] rounded-xl shadow-lg overflow-hidden z-50">
+              <button
+                onClick={() => { setMenuOpen(false); navigate('/profile') }}
+                className="w-full flex items-center gap-3 px-4 py-3 font-body text-sm text-[#1E0A4E] hover:bg-[#F8FAFC] transition-colors"
+              >
+                <span className="text-[#1E0A4E]/60"><IconUser /></span>
+                Mi perfil
+              </button>
+              <div className="h-px bg-[#E2E8F0] mx-3" />
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 font-body text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
+              >
+                <span className="text-[#EF4444]/70"><IconLogout /></span>
+                Cerrar sesión
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Mobile dropdown */}
@@ -369,7 +435,6 @@ export function Navbar(props: NavbarProps) {
           mobileOpen={mobileOpen}
           onTripSelect={props.onTripSelect}
           onNotifications={props.onNotifications}
-          onUserMenu={props.onUserMenu}
         />
       ) : (
         <LandingNavContent
