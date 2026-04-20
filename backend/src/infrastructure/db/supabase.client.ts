@@ -26,3 +26,6 @@ export const supabaseAdmin: SupabaseClient = createClient(
     },
   }
 );
+
+// Alias de compatibilidad para el resto del backend
+export const supabase = supabaseAdmin;

@@ -237,15 +237,4 @@ router.get('/me', requireAuth, async (req: Request, res: Response): Promise<void
   }
 });
 
-// Compatibilidad temporal
-router.post('/test-signup', async (req: Request, res: Response) => {
-  req.url = '/register';
-  router.handle(req, res, () => undefined);
-});
-
-router.post('/test-login', async (req: Request, res: Response) => {
-  req.url = '/login';
-  router.handle(req, res, () => undefined);
-});
-
 export default router;
