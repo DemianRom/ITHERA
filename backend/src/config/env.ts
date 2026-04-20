@@ -43,5 +43,4 @@ import * as dotenv from 'dotenv';
     GOOGLE_MAPS_BASE_URL: process.env.GOOGLE_MAPS_BASE_URL,                       
     GOOGLE_ROUTES_BASE_URL: process.env.GOOGLE_ROUTES_BASE_URL,
     GOOGLE_PLACES_BASE_URL: process.env.GOOGLE_PLACES_BASE_URL,                   
-  };                        
-  AMADEUS_AUTH_URL: process.env.AMADEUS_AUTH_URL,t
+  };
