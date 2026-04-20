@@ -33,6 +33,8 @@ interface DashboardNavbarProps {
   user?: NavUserInfo
   notificationCount?: number
   isOnline?: boolean
+  showTripSelector?: boolean
+  centerTitle?: string
   onToggleSidebar?: () => void
   onTripSelect?: () => void
   onNotifications?: () => void
@@ -234,10 +236,18 @@ interface DashboardContentProps {
   notificationCount: number
   isOnline: boolean
   mobileOpen: boolean
+  showTripSelector: boolean
+  centerTitle: string
   onTripSelect?: () => void
   onNotifications?: () => void
   onUserMenu?: () => void
 }
+
+const SAMPLE_NOTIFICATIONS = [
+  { id: 1, text: 'Kevin aceptó una propuesta',               time: 'hace 5 min',  unread: true  },
+  { id: 2, text: 'Nueva actividad agregada al Día 2',        time: 'hace 18 min', unread: true  },
+  { id: 3, text: 'El grupo votó por Hotel Malecón',          time: 'hace 1 h',    unread: true  },
+]
 
 function DashboardNavContent({
   trip,
@@ -245,13 +255,20 @@ function DashboardNavContent({
   notificationCount,
   isOnline,
   mobileOpen,
+  showTripSelector,
+  centerTitle,
   onTripSelect,
   onNotifications,
 }: DashboardContentProps) {
   const navigate = useNavigate()
   const { logout } = useAuth()
+
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const [notifOpen,   setNotifOpen]   = useState(false)
+  const [unreadCount, setUnreadCount] = useState(notificationCount)
+  const notifRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -264,6 +281,22 @@ function DashboardNavContent({
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [menuOpen])
 
+  useEffect(() => {
+    if (!notifOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [notifOpen])
+
+  function handleToggleNotif() {
+    setNotifOpen((o) => !o)
+    setUnreadCount(0)
+  }
+
   async function handleLogout() {
     setMenuOpen(false)
     await logout()
@@ -272,39 +305,66 @@ function DashboardNavContent({
 
   return (
     <>
-      {/* Trip selector — absolutely centered */}
-      <button
-        onClick={onTripSelect}
-        className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-2 hover:bg-white/20 transition-colors"
-        aria-label="Seleccionar viaje"
-      >
-        <span className="text-white/60 shrink-0">
-          <IconGlobe />
+      {/* Center — trip selector or plain title */}
+      {showTripSelector ? (
+        <button
+          onClick={onTripSelect}
+          className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-2 hover:bg-white/20 transition-colors"
+          aria-label="Seleccionar viaje"
+        >
+          <span className="text-white/60 shrink-0">
+            <IconGlobe />
+          </span>
+          <div className="flex flex-col items-start">
+            <span className="font-body text-sm font-bold text-white leading-tight">{trip.name}</span>
+            <span className="font-body text-[11px] text-white/60 leading-tight">{trip.subtitle}</span>
+          </div>
+          <span className="text-white/60 ml-0.5 shrink-0">
+            <IconChevronDown />
+          </span>
+        </button>
+      ) : centerTitle ? (
+        <span className="hidden md:block absolute left-1/2 -translate-x-1/2 font-heading font-bold text-white text-base pointer-events-none select-none">
+          {centerTitle}
         </span>
-        <div className="flex flex-col items-start">
-          <span className="font-body text-sm font-bold text-white leading-tight">{trip.name}</span>
-          <span className="font-body text-[11px] text-white/60 leading-tight">{trip.subtitle}</span>
-        </div>
-        <span className="text-white/60 ml-0.5 shrink-0">
-          <IconChevronDown />
-        </span>
-      </button>
+      ) : null}
 
       {/* Right section */}
       <div className="ml-auto flex items-center gap-1">
         {/* Notifications bell */}
-        <button
-          onClick={onNotifications}
-          className="relative hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-          aria-label={`Notificaciones${notificationCount > 0 ? ` — ${notificationCount} sin leer` : ''}`}
-        >
-          <IconBell />
-          {notificationCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-redError text-white rounded-full text-[10px] font-bold flex items-center justify-center leading-none">
-              {notificationCount > 9 ? '9+' : notificationCount}
-            </span>
+        <div ref={notifRef} className="relative hidden md:flex">
+          <button
+            onClick={handleToggleNotif}
+            className="relative flex items-center justify-center w-9 h-9 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label={`Notificaciones${unreadCount > 0 ? ` — ${unreadCount} sin leer` : ''}`}
+            aria-expanded={notifOpen}
+          >
+            <IconBell />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-redError text-white rounded-full text-[10px] font-bold flex items-center justify-center leading-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {notifOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-[#E2E8F0] rounded-xl shadow-lg overflow-hidden z-50">
+              <div className="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between">
+                <span className="font-heading font-bold text-[#1E0A4E] text-sm">Notificaciones</span>
+                <span className="font-body text-[11px] text-[#1E6FD9] bg-[#1E6FD9]/10 px-2 py-0.5 rounded-full">3 nuevas</span>
+              </div>
+              {SAMPLE_NOTIFICATIONS.map((n) => (
+                <div key={n.id} className="flex items-start gap-3 px-4 py-3 hover:bg-[#F8FAFC] transition-colors border-b border-[#E2E8F0] last:border-none cursor-default">
+                  <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.unread ? 'bg-[#1E6FD9]' : 'bg-transparent'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-body text-sm text-[#1E0A4E] leading-snug">{n.text}</p>
+                    <p className="font-body text-[11px] text-[#1E0A4E]/40 mt-0.5">{n.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-        </button>
+        </div>
 
         {/* Divider */}
         <span className="hidden md:block w-px h-5 bg-white/10 mx-1" />
@@ -433,6 +493,8 @@ export function Navbar(props: NavbarProps) {
           notificationCount={props.notificationCount ?? 0}
           isOnline={props.isOnline ?? true}
           mobileOpen={mobileOpen}
+          showTripSelector={props.showTripSelector ?? true}
+          centerTitle={props.centerTitle ?? ''}
           onTripSelect={props.onTripSelect}
           onNotifications={props.onNotifications}
         />

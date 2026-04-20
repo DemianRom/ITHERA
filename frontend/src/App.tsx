@@ -9,6 +9,7 @@ import { ForgotPasswordPage } from './pages/ForgotPassword';
 import { GroupSettingsPage } from './pages/GroupSettings';
 import { ResetPasswordPage } from './pages/ResetPassword/ResetPasswordPage';
 import { ProfilePage } from './pages/Profile';
+import { NotFoundPage } from './pages/NotFound';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 function App() {
@@ -61,6 +62,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );

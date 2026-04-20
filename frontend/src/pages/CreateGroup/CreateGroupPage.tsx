@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Navbar } from '../../components/layout/Navbar/Navbar'
-import { Sidebar } from '../../components/layout/Sidebar/Sidebar'
+import { useNavigate } from 'react-router-dom'
+import { AppLayout } from '../../components/layout/AppLayout'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Member {
@@ -54,20 +54,20 @@ function InputField({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="font-body text-xs text-[#7A8799] uppercase tracking-wider">{label}</label>
+      <label className="font-body text-xs font-semibold text-[#1E0A4E]/60 uppercase tracking-wide">{label}</label>
       <input
         type={type}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full font-body text-sm text-[#1E0A4E] placeholder-[#C4CDD6] border rounded-xl px-4 py-3 outline-none transition-all duration-200 bg-white
+        className={`w-full font-body text-sm text-[#1E0A4E] placeholder-gray-400 border rounded-xl px-4 py-3 outline-none transition-all duration-200 bg-white
           ${error
             ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100'
             : 'border-[#E2E8F0] focus:border-[#1E6FD9] focus:ring-2 focus:ring-[#1E6FD9]/10'
           }
         `}
       />
-      {hint && !error && <p className="font-body text-[11px] text-[#7A8799]">{hint}</p>}
+      {hint && !error && <p className="font-body text-[11px] text-[#1E0A4E]/40">{hint}</p>}
       {error && <p className="font-body text-xs text-red-500">{error}</p>}
     </div>
   )
@@ -91,14 +91,14 @@ function DestinationSelect({
 
   return (
     <div className="flex flex-col gap-1.5 relative">
-      <label className="font-body text-xs text-[#7A8799] uppercase tracking-wider">Destino</label>
+      <label className="font-body text-xs font-semibold text-[#1E0A4E]/60 uppercase tracking-wide">Destino</label>
       <div
         className={`w-full font-body text-sm border rounded-xl px-4 py-3 cursor-pointer flex items-center justify-between bg-white transition-all duration-200
           ${error ? 'border-red-400' : value ? 'border-[#1E6FD9] ring-2 ring-[#1E6FD9]/10' : 'border-[#E2E8F0] hover:border-[#1E6FD9]/50'}
         `}
         onClick={() => setOpen(!open)}
       >
-        <span className={value ? 'text-[#1E0A4E]' : 'text-[#C4CDD6]'}>
+        <span className={value ? 'text-[#1E0A4E]' : 'text-gray-400'}>
           {value || 'Selecciona un destino'}
         </span>
         <svg
@@ -129,8 +129,8 @@ function DestinationSelect({
                 <div
                   key={dest}
                   onClick={() => { onChange(dest); setOpen(false); setSearch('') }}
-                  className={`font-body text-sm px-4 py-2.5 cursor-pointer transition-colors hover:bg-[#F4F6F8]
-                    ${value === dest ? 'text-[#1E6FD9] bg-[#1E6FD9]/5' : 'text-[#3D4A5C]'}
+                  className={`font-body text-sm px-4 py-2.5 cursor-pointer transition-colors hover:bg-[#F8FAFC]
+                    ${value === dest ? 'text-[#1E6FD9] bg-[#1E6FD9]/5' : 'text-[#1E0A4E]'}
                   `}
                 >
                   {dest}
@@ -168,7 +168,7 @@ function MembersSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="font-body text-xs text-[#7A8799] uppercase tracking-wider">
+      <label className="font-body text-xs font-semibold text-[#1E0A4E]/60 uppercase tracking-wide">
         Invitar miembros (opcional)
       </label>
 
@@ -179,14 +179,14 @@ function MembersSection({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-          className={`flex-1 font-body text-sm text-[#1E0A4E] placeholder-[#C4CDD6] border rounded-xl px-4 py-3 outline-none transition-all duration-200 bg-white
+          className={`flex-1 font-body text-sm text-[#1E0A4E] placeholder-gray-400 border rounded-xl px-4 py-3 outline-none transition-all duration-200 bg-white
             ${error ? 'border-red-400' : 'border-[#E2E8F0] focus:border-[#1E6FD9] focus:ring-2 focus:ring-[#1E6FD9]/10'}
           `}
         />
         <button
           onClick={handleAdd}
           type="button"
-          className="font-body text-sm font-medium bg-[#1E0A4E] text-white rounded-xl px-4 py-3 hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-1.5"
+          className="font-body text-sm font-semibold bg-[#1E6FD9] text-white rounded-xl px-4 py-3 hover:bg-[#1a5fc2] transition-colors whitespace-nowrap flex items-center gap-1.5"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -202,7 +202,7 @@ function MembersSection({
           {members.map((m) => (
             <div
               key={m.id}
-              className="flex items-center justify-between bg-[#F4F6F8] rounded-xl px-4 py-2.5 border border-[#E2E8F0]"
+              className="flex items-center justify-between bg-[#F0EEF8] rounded-xl px-4 py-2.5 border border-[#E2E8F0]"
             >
               <div className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-full bg-[#1E6FD9]/10 flex items-center justify-center">
@@ -210,7 +210,7 @@ function MembersSection({
                     {m.email[0]}
                   </span>
                 </div>
-                <span className="font-body text-sm text-[#3D4A5C]">{m.email}</span>
+                <span className="font-body text-sm text-[#1E0A4E]">{m.email}</span>
               </div>
               <button
                 onClick={() => onRemove(m.id)}
@@ -241,14 +241,9 @@ function SectionLabel({ icon, title }: { icon: React.ReactNode; title: string })
   )
 }
 
-const CREATE_GROUP_NAV = [
-  { href: '/dashboard', label: 'Mis viajes' },
-  { href: '/create-group', label: 'Crear grupo' },
-]
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function CreateGroupPage() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const navigate = useNavigate()
   const [form, setForm] = useState<FormData>({
     name: '',
     destination: '',
@@ -291,95 +286,68 @@ export function CreateGroupPage() {
   // ── Success State ────────────────────────────────────────────────────────
   if (created) {
     return (
-      <div className="min-h-screen bg-[#F4F6F8]">
-        <Navbar
-          variant="dashboard"
-          trip={{ name: form.name || 'Nuevo grupo', subtitle: form.destination || 'Configurando viaje' }}
-          user={{ name: 'Bryan A.', role: 'Organizador', initials: 'BA', color: '#1E6FD9' }}
-          onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
-        />
-        <Sidebar
-          navItems={CREATE_GROUP_NAV}
-          activeHref="/create-group"
-          isCollapsed={isSidebarCollapsed}
-        />
-        <main
-          className={`flex items-center justify-center min-h-screen px-4 py-12 pt-28 transition-all duration-300 ${
-            isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
-          }`}
-        >
-        <div
-          className="fixed inset-0 opacity-40 pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(circle, rgba(30,10,78,0.04) 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-          }}
-        />
-        <div className="relative w-full max-w-md">
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 text-center">
-            <div className="w-16 h-16 bg-[#35C56A]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-[#35C56A]">
-                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <h2 className="font-heading font-bold text-[#1E0A4E] text-2xl mb-2">
-              ¡Grupo creado!
-            </h2>
-            <p className="font-body text-sm text-[#7A8799] mb-6">
-              Comparte este código con tu equipo para que se unan al viaje.
-            </p>
-
-            <div className="bg-[#1E0A4E] rounded-2xl p-5 mb-6">
-              <p className="font-body text-xs text-white/40 uppercase tracking-wider mb-2">Código del grupo</p>
-              <p className="font-heading font-bold text-white text-2xl tracking-widest">{groupCode}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => navigator.clipboard.writeText(groupCode)}
-                className="font-body text-sm border border-[#E2E8F0] text-[#3D4A5C] rounded-xl px-4 py-3 hover:border-[#1E6FD9] hover:text-[#1E6FD9] transition-colors flex items-center justify-center gap-2"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2" />
-                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <AppLayout
+        user={{ name: 'Bryan A.', role: 'Organizador', initials: 'BA', color: '#1E6FD9' }}
+        showTripSelector={false}
+        showRightPanel={false}
+      >
+        <div className="flex-1 flex items-center justify-center px-4 py-12">
+          <div
+            className="fixed inset-0 opacity-40 pointer-events-none"
+            style={{
+              backgroundImage: 'radial-gradient(circle, rgba(30,10,78,0.04) 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+            }}
+          />
+          <div className="relative w-full max-w-md">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 text-center">
+              <div className="w-16 h-16 bg-[#35C56A]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-[#35C56A]">
+                  <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Copiar código
-              </button>
-              <a
-                href="/dashboard"
-                className="font-body font-medium text-sm bg-[#1E6FD9] text-white rounded-xl px-4 py-3 hover:opacity-90 transition-opacity flex items-center justify-center"
-              >
-                Ir al grupo →
-              </a>
+              </div>
+              <h2 className="font-heading font-bold text-[#1E0A4E] text-2xl mb-2">¡Grupo creado!</h2>
+              <p className="font-body text-sm text-[#7A8799] mb-6">
+                Comparte este código con tu equipo para que se unan al viaje.
+              </p>
+              <div className="bg-[#1E0A4E] rounded-2xl p-5 mb-6">
+                <p className="font-body text-xs text-white/40 uppercase tracking-wider mb-2">Código del grupo</p>
+                <p className="font-heading font-bold text-white text-2xl tracking-widest">{groupCode}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => navigator.clipboard.writeText(groupCode)}
+                  className="font-body text-sm border border-[#E2E8F0] text-[#3D4A5C] rounded-xl px-4 py-3 hover:border-[#1E6FD9] hover:text-[#1E6FD9] transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2" />
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  Copiar código
+                </button>
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="font-body font-medium text-sm bg-[#1E6FD9] text-white rounded-xl px-4 py-3 hover:opacity-90 transition-opacity flex items-center justify-center"
+                >
+                  Ir al grupo →
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        </main>
-      </div>
+      </AppLayout>
     )
   }
 
   // ── Form ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#F4F6F8]">
-      <Navbar
-        variant="dashboard"
-        trip={{ name: 'Nuevo grupo', subtitle: 'Configura tu viaje grupal' }}
-        user={{ name: 'Bryan A.', role: 'Organizador', initials: 'BA', color: '#1E6FD9' }}
-        onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
-      />
-      <Sidebar
-        navItems={CREATE_GROUP_NAV}
-        activeHref="/create-group"
-        isCollapsed={isSidebarCollapsed}
-      />
-
-      <main
-        className={`pb-10 pt-24 px-4 transition-all duration-300 ${
-          isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
-        }`}
-      >
+    <AppLayout
+      user={{ name: 'Bryan A.', role: 'Organizador', initials: 'BA', color: '#1E6FD9' }}
+      showTripSelector={false}
+      showRightPanel={false}
+    >
+      <div className="flex-1 overflow-y-auto">
       <div
         className="fixed inset-0 opacity-40 pointer-events-none"
         style={{
@@ -388,7 +356,16 @@ export function CreateGroupPage() {
         }}
       />
 
-      <div className="relative max-w-2xl mx-auto">
+      <div className="relative max-w-2xl mx-auto px-4 py-8">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-1.5 font-body text-sm text-[#1E6FD9] hover:underline mb-6"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Volver
+        </button>
         <div className="mb-8">
           <h1 className="font-heading font-bold text-[#1E0A4E] text-3xl mb-2">Crear nuevo grupo</h1>
           <p className="font-body text-sm text-[#7A8799]">
@@ -464,7 +441,7 @@ export function CreateGroupPage() {
               />
             </div>
             <div className="mt-4">
-              <label className="font-body text-xs text-[#7A8799] uppercase tracking-wider block mb-1.5">
+              <label className="font-body text-xs font-semibold text-[#1E0A4E]/60 uppercase tracking-wide block mb-1.5">
                 Máximo de miembros
               </label>
               <div className="flex items-center gap-3">
@@ -514,14 +491,16 @@ export function CreateGroupPage() {
                 </p>
               </div>
               <button
+                role="switch"
+                aria-checked={form.isPublic}
                 onClick={() => set('isPublic')(!form.isPublic)}
-                className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${
-                  form.isPublic ? 'bg-[#1E6FD9]' : 'bg-[#E2E8F0]'
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#1E6FD9]/30 ${
+                  form.isPublic ? 'bg-[#1E6FD9]' : 'bg-gray-200'
                 }`}
               >
                 <span
-                  className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
-                    form.isPublic ? 'translate-x-7' : 'translate-x-1'
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                    form.isPublic ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -556,8 +535,8 @@ export function CreateGroupPage() {
           </button>
         </div>
       </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   )
 }
 

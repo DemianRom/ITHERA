@@ -16,6 +16,8 @@ export interface AppLayoutProps {
   sidebarContent?: React.ReactNode
   rightPanel?: React.ReactNode
   showRightPanel?: boolean
+  showTripSelector?: boolean
+  centerTitle?: string
   trip?: TripMeta
   user?: NavUserInfo
   notificationCount?: number
@@ -83,6 +85,8 @@ export function AppLayout({
   sidebarContent,
   rightPanel,
   showRightPanel = true,
+  showTripSelector = true,
+  centerTitle,
   trip,
   user,
   notificationCount = 0,
@@ -105,6 +109,8 @@ export function AppLayout({
         user={user}
         notificationCount={notificationCount}
         isOnline={isOnline}
+        showTripSelector={showTripSelector}
+        centerTitle={centerTitle}
         onToggleSidebar={() => setSidebarOpen((o) => !o)}
       />
 

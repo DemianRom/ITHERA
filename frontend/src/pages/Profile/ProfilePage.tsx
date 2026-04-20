@@ -256,9 +256,10 @@ export function ProfilePage() {
   const avatarInitials = getInitials(displayName)
 
   return (
-    <AppLayout user={navUser} showRightPanel={false}>
+    <AppLayout user={navUser} showRightPanel={false} showTripSelector={false}>
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
+          <h1 className="font-heading font-bold text-2xl text-[#1E0A4E]">Mi perfil</h1>
 
           {/* ── Header ──────────────────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 flex flex-col sm:flex-row items-center sm:items-start gap-5">
