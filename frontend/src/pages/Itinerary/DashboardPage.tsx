@@ -307,8 +307,10 @@ export function DashboardPage() {
   const dayRefs = useRef<Record<number, DayViewHandle | null>>({})
 
   const handleDayChange = useCallback((dayNumber: number) => {
-    setActiveDay((prev) => prev === dayNumber ? null : dayNumber)
-  }, [])
+    const next = activeDay === dayNumber ? null : dayNumber
+    setActiveDay(next)
+    setExpandedDay(next)
+  }, [activeDay])
 
   const handleDayExpand = useCallback((dayNumber: number) => {
     setExpandedDay((prev) => prev === dayNumber ? null : dayNumber)
