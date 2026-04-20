@@ -239,7 +239,6 @@ interface DashboardContentProps {
   showTripSelector: boolean
   centerTitle: string
   onTripSelect?: () => void
-  onNotifications?: () => void
   onUserMenu?: () => void
 }
 
@@ -258,7 +257,6 @@ function DashboardNavContent({
   showTripSelector,
   centerTitle,
   onTripSelect,
-  onNotifications,
 }: DashboardContentProps) {
   const navigate = useNavigate()
   const { logout } = useAuth()
