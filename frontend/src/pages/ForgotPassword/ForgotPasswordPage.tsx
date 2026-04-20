@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import logoWhite from "../../assets/logo-white.png";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '../../context/useAuth';
 
 export function ForgotPasswordPage() {
   const { forgotPassword } = useAuth();

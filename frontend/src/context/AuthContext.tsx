@@ -1,51 +1,20 @@
 import {
-  createContext,
-  useContext,
   useEffect,
   useMemo,
   useState,
-  ReactNode,
+  useCallback,
 } from 'react';
+import type { ReactNode } from 'react';
 import { apiClient } from '../services/apiClient';
 import { supabase } from '../lib/supabase';
-
-type SessionUser = {
-  id: string;
-  email: string;
-};
-
-type LocalUser = {
-  id_usuario: string;
-  auth_user_id: string;
-  email: string;
-  nombre: string;
-  proveedor_auth: string;
-};
-
-type AuthContextType = {
-  accessToken: string | null;
-  sessionUser: SessionUser | null;
-  localUser: LocalUser | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (payload: {
-    name: string;
-    lastNamePaterno: string;
-    lastNameMaterno: string;
-    email: string;
-    password: string;
-  }) => Promise<{
-    requiresEmailConfirmation: boolean;
-    message: string;
-  }>;
-  forgotPassword: (email: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  loginWithFacebook: () => Promise<void>;
-  logout: () => Promise<void>;
-  refreshMe: (token?: string) => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import {
+  AuthContext,
+  type LocalUser,
+  type RegisterPayload,
+  type RegisterResult,
+  type SessionShape,
+  type SessionUser,
+} from './auth-context';
 
 const STORAGE_KEY = 'ithera_auth';
 
@@ -55,27 +24,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [localUser, setLocalUser] = useState<LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const clearAuthState = () => {
+  const clearAuthState = useCallback(() => {
     setAccessToken(null);
     setSessionUser(null);
     setLocalUser(null);
     localStorage.removeItem(STORAGE_KEY);
-  };
+  }, []);
 
-  const persist = (payload: {
-    accessToken: string | null;
-    sessionUser: SessionUser | null;
-    localUser: LocalUser | null;
-  }) => {
-    if (!payload.accessToken || !payload.sessionUser) {
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
+  const persist = useCallback(
+    (payload: {
+      accessToken: string | null;
+      sessionUser: SessionUser | null;
+      localUser: LocalUser | null;
+    }) => {
+      if (!payload.accessToken || !payload.sessionUser) {
+        localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    },
+    []
+  );
 
-  const syncUser = async (token: string) => {
+  const syncUser = useCallback(async (token: string) => {
     const syncRes = await apiClient.post<{ ok: boolean; user: LocalUser }>(
       '/auth/sync-user',
       {},
@@ -83,124 +55,127 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     return syncRes.user;
-  };
+  }, []);
 
-  const applySession = async (session: {
-    access_token: string;
-    user: { id: string; email?: string | null };
-  }) => {
-    const browserUser: SessionUser = {
-      id: session.user.id,
-      email: session.user.email ?? '',
-    };
+  const applySession = useCallback(
+    async (session: SessionShape) => {
+      const browserUser: SessionUser = {
+        id: session.user.id,
+        email: session.user.email ?? '',
+      };
 
-    const syncedUser = await syncUser(session.access_token);
+      const syncedUser = await syncUser(session.access_token);
 
-    setAccessToken(session.access_token);
-    setSessionUser(browserUser);
-    setLocalUser(syncedUser);
+      setAccessToken(session.access_token);
+      setSessionUser(browserUser);
+      setLocalUser(syncedUser);
 
-    persist({
-      accessToken: session.access_token,
-      sessionUser: browserUser,
-      localUser: syncedUser,
-    });
-  };
+      persist({
+        accessToken: session.access_token,
+        sessionUser: browserUser,
+        localUser: syncedUser,
+      });
+    },
+    [persist, syncUser]
+  );
 
-  const refreshMe = async (tokenParam?: string) => {
-    const token = tokenParam ?? accessToken;
-    if (!token) return;
+  const refreshMe = useCallback(
+    async (tokenParam?: string) => {
+      const token = tokenParam ?? accessToken;
+      if (!token) return;
 
-    const meRes = await apiClient.get<{ ok: boolean; user: LocalUser }>(
-      '/auth/me',
-      token
-    );
+      const meRes = await apiClient.get<{ ok: boolean; user: LocalUser }>(
+        '/auth/me',
+        token
+      );
 
-    setLocalUser(meRes.user);
+      setLocalUser(meRes.user);
 
-    persist({
-      accessToken: token,
-      sessionUser,
-      localUser: meRes.user,
-    });
-  };
+      persist({
+        accessToken: token,
+        sessionUser,
+        localUser: meRes.user,
+      });
+    },
+    [accessToken, sessionUser, persist]
+  );
 
-  const login = async (email: string, password: string) => {
-    const loginRes = await apiClient.post<{
-      ok: boolean;
-      session: { access_token: string } | null;
-      user: SessionUser | null;
-    }>('/auth/login', { email, password });
-
-    if (!loginRes.session?.access_token || !loginRes.user) {
-      throw new Error('No se pudo iniciar sesión');
-    }
-
-    const token = loginRes.session.access_token;
-    const syncedUser = await syncUser(token);
-
-    setAccessToken(token);
-    setSessionUser(loginRes.user);
-    setLocalUser(syncedUser);
-
-    persist({
-      accessToken: token,
-      sessionUser: loginRes.user,
-      localUser: syncedUser,
-    });
-  };
-
-  const register = async (payload: {
-    name: string;
-    lastNamePaterno: string;
-    lastNameMaterno: string;
-    email: string;
-    password: string;
-  }) => {
-    const registerRes = await apiClient.post<{
-      ok: boolean;
-      message?: string;
-      data: {
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const loginRes = await apiClient.post<{
+        ok: boolean;
         session: { access_token: string } | null;
         user: SessionUser | null;
-      };
-    }>('/auth/register', payload);
+      }>('/auth/login', { email, password });
 
-    const token = registerRes.data?.session?.access_token;
-    const user = registerRes.data?.user;
+      if (!loginRes.session?.access_token || !loginRes.user) {
+        throw new Error('No se pudo iniciar sesión');
+      }
 
-    if (token && user) {
+      const token = loginRes.session.access_token;
       const syncedUser = await syncUser(token);
 
       setAccessToken(token);
-      setSessionUser(user);
+      setSessionUser(loginRes.user);
       setLocalUser(syncedUser);
 
       persist({
         accessToken: token,
-        sessionUser: user,
+        sessionUser: loginRes.user,
         localUser: syncedUser,
       });
+    },
+    [persist, syncUser]
+  );
+
+  const register = useCallback(
+    async (payload: RegisterPayload): Promise<RegisterResult> => {
+      const registerRes = await apiClient.post<{
+        ok: boolean;
+        message?: string;
+        data: {
+          session: { access_token: string } | null;
+          user: SessionUser | null;
+        };
+      }>('/auth/register', payload);
+
+      const token = registerRes.data?.session?.access_token;
+      const user = registerRes.data?.user;
+
+      if (token && user) {
+        const syncedUser = await syncUser(token);
+
+        setAccessToken(token);
+        setSessionUser(user);
+        setLocalUser(syncedUser);
+
+        persist({
+          accessToken: token,
+          sessionUser: user,
+          localUser: syncedUser,
+        });
+
+        return {
+          requiresEmailConfirmation: false,
+          message: registerRes.message ?? 'Usuario registrado correctamente',
+        };
+      }
 
       return {
-        requiresEmailConfirmation: false,
-        message: registerRes.message ?? 'Usuario registrado correctamente',
+        requiresEmailConfirmation: true,
+        message:
+          registerRes.message ??
+          'Cuenta creada. Revisa tu correo para confirmar tu cuenta.',
       };
-    }
+    },
+    [persist, syncUser]
+  );
 
-    return {
-      requiresEmailConfirmation: true,
-      message:
-        registerRes.message ??
-        'Cuenta creada. Revisa tu correo para confirmar tu cuenta.',
-    };
-  };
-
-  const forgotPassword = async (email: string) => {
+  const forgotPassword = useCallback(async (email: string) => {
     await apiClient.post('/auth/forgot-password', { email });
-  };
+  }, []);
 
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -209,9 +184,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) throw error;
-  };
+  }, []);
 
-  const loginWithFacebook = async () => {
+  const loginWithFacebook = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
       options: {
@@ -220,12 +195,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) throw error;
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await supabase.auth.signOut();
     clearAuthState();
-  };
+  }, [clearAuthState]);
 
   useEffect(() => {
     let isMounted = true;
@@ -233,18 +208,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const bootstrap = async () => {
       try {
         const {
-            data: { session },
+          data: { session },
         } = await supabase.auth.getSession();
 
         if (!isMounted) return;
 
         if (session?.access_token && session.user) {
-        await applySession(session);
+          await applySession(session);
         } else {
-        await supabase.auth.signOut();
-        clearAuthState();
+          await supabase.auth.signOut();
+          clearAuthState();
         }
-        
       } catch (error) {
         console.error('Error al restaurar sesión:', error);
         await supabase.auth.signOut();
@@ -284,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [applySession, clearAuthState]);
 
   const value = useMemo(
     () => ({
@@ -300,14 +274,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       refreshMe,
     }),
-    [accessToken, sessionUser, localUser, loading]
+    [
+      accessToken,
+      sessionUser,
+      localUser,
+      loading,
+      login,
+      register,
+      forgotPassword,
+      loginWithGoogle,
+      loginWithFacebook,
+      logout,
+      refreshMe,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider');
-  return ctx;
 }

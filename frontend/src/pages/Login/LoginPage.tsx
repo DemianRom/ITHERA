@@ -3,7 +3,7 @@ import logoWhite from "../../assets/logo-white.png";
 import googleIcon from "../../assets/google.png";
 import facebookIcon from "../../assets/facebook.png";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '../../context/useAuth';
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
