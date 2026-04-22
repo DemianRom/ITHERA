@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { AppLayout, RightPanelDashboard, SidebarDashboard } from '../../components/layout/AppLayout'
 import { DayView } from '../../components/ui/DayView'
 import type { Activity as DayActivity, DayViewHandle } from '../../components/ui/DayView'
+import { ProposalCard } from '../../components/ProposalCard/ProposalCard'
 import { ITINERARY_DAYS } from '../../mock/itinerary.mock'
 
 function IconDownload({ size = 14 }: { size?: number }) {
@@ -371,6 +372,37 @@ export function DashboardPage() {
               />
             ))}
           </div>
+
+          {/* ── Propuestas pendientes ── */}
+          {(() => {
+            const pending = days.flatMap((d) => d.activities).filter((a) => a.status === 'pendiente')
+            if (pending.length === 0) return null
+            return (
+              <div className="mt-6">
+                <h2 className="font-heading font-bold text-[#1E0A4E] text-base mb-3">
+                  Propuestas pendientes
+                </h2>
+                <div className="flex flex-col gap-3">
+                  {pending.map((activity) => (
+                    <ProposalCard
+                      key={activity.id}
+                      activity={activity}
+                      proposalStatus="pendiente"
+                      onAccept={(id) => console.log('aceptar', id)}
+                      onDelete={(id) => {
+                        setDays((prev) =>
+                          prev.map((d) => ({
+                            ...d,
+                            activities: d.activities.filter((a) => a.id !== id),
+                          }))
+                        )
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 
