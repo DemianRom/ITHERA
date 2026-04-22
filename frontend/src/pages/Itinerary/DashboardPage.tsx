@@ -303,6 +303,7 @@ export function DashboardPage() {
   const [expandedDay, setExpandedDay] = useState<number | null>(null)
   const [activeTab,   setActiveTab]   = useState('pagar')
   const [isLoading,   setIsLoading]   = useState(false)
+  const [days,        setDays]        = useState(ITINERARY_DAYS)
 
   const dayRefs = useRef<Record<number, DayViewHandle | null>>({})
 
@@ -316,8 +317,8 @@ export function DashboardPage() {
     setExpandedDay((prev) => prev === dayNumber ? null : dayNumber)
   }, [])
 
-  const isEmpty = ITINERARY_DAYS.length === 0
-  const selectedDay = activeDay !== null ? ITINERARY_DAYS.find((day) => day.dayNumber === activeDay) : undefined
+  const isEmpty = days.length === 0
+  const selectedDay = activeDay !== null ? days.find((day) => day.dayNumber === activeDay) : undefined
 
   void setIsLoading
 
@@ -345,7 +346,7 @@ export function DashboardPage() {
           <InfoBanner />
           <TimelineStrip activeDay={activeDay} date={selectedDay?.date} activities={selectedDay?.activities} />
           <div className="flex flex-col gap-3">
-            {ITINERARY_DAYS.map((day) => (
+            {days.map((day) => (
               <DayView
                 key={day.dayNumber}
                 ref={(handle) => {
@@ -357,6 +358,16 @@ export function DashboardPage() {
                 isActive={day.dayNumber === activeDay}
                 isExpanded={day.dayNumber === expandedDay}
                 onSelect={handleDayExpand}
+                onAccept={(id) => console.log('aceptar', id)}
+                onDelete={(id) => {
+                  setDays((prev) =>
+                    prev.map((d) =>
+                      d.dayNumber === day.dayNumber
+                        ? { ...d, activities: d.activities.filter((a) => a.id !== id) }
+                        : d
+                    )
+                  )
+                }}
               />
             ))}
           </div>
