@@ -3,6 +3,7 @@ import { AppLayout, RightPanelDashboard, SidebarDashboard } from '../../componen
 import { DayView } from '../../components/ui/DayView'
 import type { Activity as DayActivity, DayViewHandle } from '../../components/ui/DayView'
 import { ProposalCard } from '../../components/ProposalCard/ProposalCard'
+import { ComparisonPage } from '../Comparison/ComparisonPage'
 import { ITINERARY_DAYS } from '../../mock/itinerary.mock'
 
 function IconDownload({ size = 14 }: { size?: number }) {
@@ -341,6 +342,10 @@ export function DashboardPage() {
         <SkeletonView />
       ) : isEmpty ? (
         <EmptyState onAdd={() => {}} />
+      ) : activeTab === 'comparar' ? (
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <ComparisonPage onBack={() => setActiveTab('pagar')} />
+        </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
           <HeroCard activeDay={activeDay} />
