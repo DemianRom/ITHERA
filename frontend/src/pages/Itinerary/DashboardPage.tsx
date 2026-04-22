@@ -2,6 +2,8 @@ import { useCallback, useRef, useState } from 'react'
 import { AppLayout, RightPanelDashboard, SidebarDashboard } from '../../components/layout/AppLayout'
 import { DayView } from '../../components/ui/DayView'
 import type { Activity as DayActivity, DayViewHandle } from '../../components/ui/DayView'
+import { ProposalCard } from '../../components/ProposalCard/ProposalCard'
+import { ComparisonPage } from '../Comparison/ComparisonPage'
 import { ITINERARY_DAYS } from '../../mock/itinerary.mock'
 
 function IconDownload({ size = 14 }: { size?: number }) {
@@ -303,6 +305,7 @@ export function DashboardPage() {
   const [expandedDay, setExpandedDay] = useState<number | null>(null)
   const [activeTab,   setActiveTab]   = useState('pagar')
   const [isLoading,   setIsLoading]   = useState(false)
+  const [days,        setDays]        = useState(ITINERARY_DAYS)
 
   const dayRefs = useRef<Record<number, DayViewHandle | null>>({})
 
@@ -316,8 +319,8 @@ export function DashboardPage() {
     setExpandedDay((prev) => prev === dayNumber ? null : dayNumber)
   }, [])
 
-  const isEmpty = ITINERARY_DAYS.length === 0
-  const selectedDay = activeDay !== null ? ITINERARY_DAYS.find((day) => day.dayNumber === activeDay) : undefined
+  const isEmpty = days.length === 0
+  const selectedDay = activeDay !== null ? days.find((day) => day.dayNumber === activeDay) : undefined
 
   void setIsLoading
 
@@ -339,13 +342,17 @@ export function DashboardPage() {
         <SkeletonView />
       ) : isEmpty ? (
         <EmptyState onAdd={() => {}} />
+      ) : activeTab === 'comparar' ? (
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <ComparisonPage onBack={() => setActiveTab('pagar')} />
+        </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
           <HeroCard activeDay={activeDay} />
           <InfoBanner />
           <TimelineStrip activeDay={activeDay} date={selectedDay?.date} activities={selectedDay?.activities} />
           <div className="flex flex-col gap-3">
-            {ITINERARY_DAYS.map((day) => (
+            {days.map((day) => (
               <DayView
                 key={day.dayNumber}
                 ref={(handle) => {
@@ -357,9 +364,50 @@ export function DashboardPage() {
                 isActive={day.dayNumber === activeDay}
                 isExpanded={day.dayNumber === expandedDay}
                 onSelect={handleDayExpand}
+                onAccept={(id) => console.log('aceptar', id)}
+                onDelete={(id) => {
+                  setDays((prev) =>
+                    prev.map((d) =>
+                      d.dayNumber === day.dayNumber
+                        ? { ...d, activities: d.activities.filter((a) => a.id !== id) }
+                        : d
+                    )
+                  )
+                }}
               />
             ))}
           </div>
+
+          {/* ── Propuestas pendientes ── */}
+          {(() => {
+            const pending = days.flatMap((d) => d.activities).filter((a) => a.status === 'pendiente')
+            if (pending.length === 0) return null
+            return (
+              <div className="mt-6">
+                <h2 className="font-heading font-bold text-[#1E0A4E] text-base mb-3">
+                  Propuestas pendientes
+                </h2>
+                <div className="flex flex-col gap-3">
+                  {pending.map((activity) => (
+                    <ProposalCard
+                      key={activity.id}
+                      activity={activity}
+                      proposalStatus="pendiente"
+                      onAccept={(id) => console.log('aceptar', id)}
+                      onDelete={(id) => {
+                        setDays((prev) =>
+                          prev.map((d) => ({
+                            ...d,
+                            activities: d.activities.filter((a) => a.id !== id),
+                          }))
+                        )
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 

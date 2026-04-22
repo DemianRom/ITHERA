@@ -27,6 +27,8 @@ export interface DayViewProps {
   isExpanded?: boolean
   /** Called when the header is clicked so the parent can update activeDay */
   onSelect?: (dayNumber: number) => void
+  onAccept?: (activityId: string) => void
+  onDelete?: (activityId: string) => void
 }
 
 export interface DayViewHandle {
@@ -237,7 +239,7 @@ function ActivityCardConfirmed({ activity }: { activity: Activity }) {
 
 // ── ActivityCardPending ───────────────────────────────────────────────────────
 
-function ActivityCardPending({ activity }: { activity: Activity }) {
+function ActivityCardPending({ activity, onAccept, onDelete }: { activity: Activity; onAccept?: (id: string) => void; onDelete?: (id: string) => void }) {
   const iconColor = getCategoryColor(activity.category)
 
   return (
@@ -303,11 +305,15 @@ function ActivityCardPending({ activity }: { activity: Activity }) {
 
         {/* Accept / Delete row */}
         <div className="flex items-center gap-2 mt-3">
-          <button className="flex-1 inline-flex items-center justify-center gap-1.5 font-body text-sm font-bold text-white bg-bluePrimary rounded-xl h-11 hover:bg-bluePrimary/90 transition-colors">
+          <button
+            onClick={() => onAccept?.(activity.id)}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 font-body text-sm font-bold text-white bg-bluePrimary rounded-xl h-11 hover:bg-bluePrimary/90 transition-colors"
+          >
             <IconCheck size={12} />
             Aceptar propuesta
           </button>
           <button
+            onClick={() => onDelete?.(activity.id)}
             className="w-11 h-11 flex items-center justify-center rounded-xl border border-[#E2E8F0] text-gray500 hover:text-red-500 hover:border-red-200 transition-colors shrink-0"
             aria-label="Eliminar propuesta"
           >
@@ -355,7 +361,7 @@ function EmptyDayState() {
 
 // ── ActivitiesBody ────────────────────────────────────────────────────────────
 
-function ActivitiesBody({ activities }: { activities: Activity[] }) {
+function ActivitiesBody({ activities, onAccept, onDelete }: { activities: Activity[]; onAccept?: (id: string) => void; onDelete?: (id: string) => void }) {
   const transport = activities.filter((a) => a.category === 'transporte')
   const lodging   = activities.filter((a) => a.category === 'hospedaje')
   const acts      = activities.filter((a) => a.category === 'actividad')
@@ -368,7 +374,7 @@ function ActivitiesBody({ activities }: { activities: Activity[] }) {
           {transport.map((a) =>
             a.status === 'confirmada'
               ? <ActivityCardConfirmed key={a.id} activity={a} />
-              : <ActivityCardPending   key={a.id} activity={a} />
+              : <ActivityCardPending   key={a.id} activity={a} onAccept={onAccept} onDelete={onDelete} />
           )}
         </section>
       )}
@@ -379,7 +385,7 @@ function ActivitiesBody({ activities }: { activities: Activity[] }) {
           {lodging.map((a) =>
             a.status === 'confirmada'
               ? <ActivityCardConfirmed key={a.id} activity={a} />
-              : <ActivityCardPending   key={a.id} activity={a} />
+              : <ActivityCardPending   key={a.id} activity={a} onAccept={onAccept} onDelete={onDelete} />
           )}
         </section>
       )}
@@ -390,7 +396,7 @@ function ActivitiesBody({ activities }: { activities: Activity[] }) {
           {acts.map((a) =>
             a.status === 'confirmada'
               ? <ActivityCardConfirmed key={a.id} activity={a} />
-              : <ActivityCardPending   key={a.id} activity={a} />
+              : <ActivityCardPending   key={a.id} activity={a} onAccept={onAccept} onDelete={onDelete} />
           )}
         </section>
       )}
@@ -410,6 +416,8 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(function DayView(
     defaultExpanded = false,
     isExpanded: controlledExpanded,
     onSelect,
+    onAccept,
+    onDelete,
   },
   ref,
 ) {
@@ -492,7 +500,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(function DayView(
           {isEmpty ? (
             <EmptyDayState />
           ) : (
-            <ActivitiesBody activities={activities} />
+            <ActivitiesBody activities={activities} onAccept={onAccept} onDelete={onDelete} />
           )}
         </div>
       </div>
