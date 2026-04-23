@@ -10,6 +10,7 @@ import { GroupSettingsPage } from './pages/GroupSettings';
 import { ResetPasswordPage } from './pages/ResetPassword/ResetPasswordPage';
 import { ProfilePage } from './pages/Profile';
 import { NotFoundPage } from './pages/NotFound';
+import { MyTripsPage } from './pages/MyTrips/MyTripsPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 function App() {
@@ -22,6 +23,14 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
+        <Route
+          path="/my-trips"
+          element={
+            <ProtectedRoute>
+              <MyTripsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={

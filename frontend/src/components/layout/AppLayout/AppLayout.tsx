@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Navbar } from '../Navbar'
 import type { NavUserInfo, TripInfo } from '../Navbar'
 
@@ -51,7 +52,7 @@ function IconUsers() {
 
 const GENERAL_NAV = [
   { href: '/dashboard', label: 'Inicio'       },
-  { href: '/trips',     label: 'Mis viajes'   },
+  { href: '/my-trips',  label: 'Mis viajes'   },
   { href: '/groups',    label: 'Grupos'       },
   { href: '/settings',  label: 'Configuración'},
 ]
@@ -95,6 +96,7 @@ export function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
   )
+  const navigate = useNavigate()
 
   const tripInfo: TripInfo | undefined = trip
     ? { name: trip.name, subtitle: trip.subtitle }
@@ -157,6 +159,21 @@ export function AppLayout({
 
             {/* Variable: page-specific sidebar content */}
             {sidebarContent}
+
+            {/* Back to Mis Viajes — only when inside a trip */}
+            {trip && (
+              <div className="mt-auto pt-4 border-t border-white/10">
+                <button
+                  onClick={() => navigate('/my-trips')}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl font-body text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors duration-150"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M19 12H5M5 12l7-7M5 12l7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Mis viajes
+                </button>
+              </div>
+            )}
           </div>
         </aside>
 

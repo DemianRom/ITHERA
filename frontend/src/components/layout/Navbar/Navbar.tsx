@@ -468,7 +468,7 @@ export function Navbar(props: NavbarProps) {
   return (
     <nav className={[navBase, navTheme, navShadow].join(' ')}>
       {/* Logo */}
-      <a href={isDashboard ? '/dashboard' : '/'} className="shrink-0" aria-label="Ithera">
+      <a href={isDashboard ? '/my-trips' : '/'} className="shrink-0" aria-label="Ithera">
         <Logo variant={isDashboard ? 'white' : 'color'} height={64} />
       </a>
 
