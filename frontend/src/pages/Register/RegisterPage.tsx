@@ -117,7 +117,7 @@ export function RegisterPage() {
         return;
       }
 
-      navigate("/create-group");
+      navigate("/my-trips");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "No se pudo registrar la cuenta";

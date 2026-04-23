@@ -32,7 +32,7 @@ export function LoginPage() {
     try {
       setLoading(true);
       await login(email, password);
-      navigate("/create-group");
+      navigate("/my-trips");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "No se pudo iniciar sesión";
