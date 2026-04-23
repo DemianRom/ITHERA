@@ -1,6 +1,7 @@
-import { sendEmail } from '../../services/email.service';
 import crypto from 'crypto';
+import { sendEmail } from '../../services/email.service';
 import { supabase } from '../../infrastructure/db/supabase.client';
+import { baseTemplate } from '../../infrastructure/email/templates/baseTemplate';
 import {
   CreateGroupInvitationsPayload,
   CreateGroupPayload,
@@ -44,6 +45,66 @@ const generateInviteToken = (): string =>
 const getFrontendJoinLink = (code: string): string => {
   const baseUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
   return `${baseUrl}/join-group?code=${encodeURIComponent(code)}`;
+};
+
+const buildInviteEmailHtml = ({
+  groupName,
+  groupDescription,
+  inviteLink,
+}: {
+  groupName: string;
+  groupDescription?: string | null;
+  inviteLink: string;
+}) => {
+  const safeDescription = groupDescription?.trim();
+
+  const content = `
+    <p style="margin:0 0 14px 0;">
+      Has recibido una invitación para unirte al grupo:
+    </p>
+
+    <p style="margin:0 0 10px 0; font-size:18px; font-weight:700; color:#111827;">
+      ${groupName}
+    </p>
+
+    ${
+      safeDescription
+        ? `
+      <p style="margin:0 0 18px 0;">
+        ${safeDescription}
+      </p>
+    `
+        : ''
+    }
+
+    <p style="margin:0 0 22px 0;">
+      Da clic en el siguiente botón para unirte:
+    </p>
+
+    <a
+      href="${inviteLink}"
+      style="
+        display:inline-block;
+        padding:12px 24px;
+        background-color:#4CAF50;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:8px;
+        font-weight:700;
+      "
+    >
+      Unirme al grupo
+    </a>
+
+    <p style="margin:24px 0 0 0; font-size:12px; color:#9ca3af;">
+      Si no esperabas esta invitación, puedes ignorar este correo.
+    </p>
+  `;
+
+  return baseTemplate({
+    title: 'Te invitaron a un grupo',
+    content,
+  });
 };
 
 const getLocalUserRecord = async (
@@ -382,11 +443,7 @@ export const createGroupInvitations = async (
   const grupo = await getGroupById(groupId);
 
   const emails = Array.from(
-    new Set(
-      payload.emails
-        .map((email) => email.trim().toLowerCase())
-        .filter(Boolean)
-    )
+    new Set(payload.emails.map((email) => email.trim().toLowerCase()).filter(Boolean))
   );
 
   if (!emails.length) {
@@ -473,40 +530,26 @@ export const createGroupInvitations = async (
 
     if (insertError) throw new Error(insertError.message);
 
+    const inviteLink = getFrontendJoinLink(grupo.codigo_invitacion);
+
     results.push({
       id: String(createdInvite.id),
       email,
       status: 'created',
       codigo: grupo.codigo_invitacion,
-      inviteLink: getFrontendJoinLink(grupo.codigo_invitacion),
+      inviteLink,
     });
-    
+
+    const html = buildInviteEmailHtml({
+      groupName: grupo.nombre,
+      groupDescription: grupo.descripcion ?? null,
+      inviteLink,
+    });
+
     sendEmail({
       to: email,
       subject: `Invitación a grupo: ${grupo.nombre}`,
-      html: `
-        <h2>Te invitaron a un grupo</h2>
-        <p><strong>${grupo.nombre}</strong></p>
-        <p>${grupo.descripcion ?? ''}</p>
-
-        <p>Da clic aquí para unirte:</p>
-
-        <a href="${getFrontendJoinLink(grupo.codigo_invitacion)}"
-          style="
-            display:inline-block;
-            padding:10px 20px;
-            background:#4CAF50;
-            color:white;
-            text-decoration:none;
-            border-radius:5px;
-          ">
-          Unirme al grupo
-        </a>
-
-        <p style="margin-top:20px;font-size:12px;color:#888;">
-          Si no esperabas esta invitación, puedes ignorar este correo.
-        </p>
-      `,
+      html,
     }).catch((err) => {
       console.error('Error enviando invitación:', err);
     });
