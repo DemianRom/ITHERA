@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+import { createServer } from 'http';
 
 import { env } from './config/env';
 import { errorHandler } from './middlewares/errorHandler.middleware';
@@ -10,8 +11,11 @@ import hotelsRouter from './routes/hotels.router';
 import mapsRouter from './routes/maps.router';
 import proposalsRouter from './routes/proposals.router';
 import votesCommentsRouter from './routes/votesComments.router';
+import { initSocketServer } from './infrastructure/sockets/socket.server';
+import { startLockScheduler } from './infrastructure/sockets/lock.scheduler';
 
 const app = express();
+const httpServer = createServer(app);
 
 app.use(cors({
   origin: env.FRONTEND_URL,
@@ -38,9 +42,15 @@ app.use('/api/proposals', votesCommentsRouter);
 
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
+// ── Socket.IO + Scheduler ─────────────────────────────────────────
+const io = initSocketServer(httpServer);
+startLockScheduler(io);
+
+// ── Arranque ──────────────────────────────────────────────────────
+httpServer.listen(env.PORT, () => {
   console.log(`ITHERA backend corriendo en http://localhost:${env.PORT}`);
   console.log(`Entorno: ${env.NODE_ENV}`);
+  console.log(`Socket.IO corriendo en el mismo puerto (${env.PORT})`);
 });
 
 export default app;
