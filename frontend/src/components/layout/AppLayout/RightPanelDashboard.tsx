@@ -18,6 +18,13 @@ interface ChatMessage {
   timestamp: string
 }
 
+interface MemberFromBackend {
+  id: string
+  nombre?: string
+  email?: string
+  rol: 'admin' | 'viajero' | string
+}
+
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
 const PARTICIPANTS: Participant[] = [
@@ -34,8 +41,8 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getParticipantColor(authorName?: string): string {
-  const found = PARTICIPANTS.find((p) => p.name === authorName)
+function getParticipantColor(authorName: string | undefined, participants: Participant[]): string {
+  const found = participants.find((p) => p.name === authorName)
   return found?.color ?? '#7A4FD6'
 }
 
@@ -59,11 +66,28 @@ function IconSend({ size = 13 }: { size?: number }) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function RightPanelDashboard() {
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES)
-  const [chatInput,    setChatInput]    = useState('')
+export function RightPanelDashboard({ members = [] }: { members?: MemberFromBackend[] }) {
 
-  const onlineCount = PARTICIPANTS.filter((p) => p.isOnline).length
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES)
+  const [chatInput, setChatInput] = useState('')
+
+  const participants: Participant[] =
+    members.length > 0
+      ? members.map((member, index) => {
+          const name = member.nombre || member.email || 'Usuario'
+          const colors = ['#1E6FD9', '#35C56A', '#7A4FD6', '#F59E0B']
+
+          return {
+            id: member.id,
+            name,
+            role: member.rol === 'admin' ? 'Organizador' : 'Miembro',
+            color: colors[index % colors.length],
+            isOnline: true,
+          }
+        })
+      : PARTICIPANTS
+
+  const onlineCount = participants.filter((p) => p.isOnline).length
 
   function handleSend() {
     const text = chatInput.trim()
@@ -92,7 +116,7 @@ export function RightPanelDashboard() {
 
         {/* Overlapping avatars */}
         <div className="flex -space-x-2 mb-3">
-          {PARTICIPANTS.map((p) => (
+          {participants.map((p) => (
             <div
               key={p.id}
               className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white font-body font-bold text-xs shrink-0"
@@ -106,7 +130,7 @@ export function RightPanelDashboard() {
 
         {/* Participant list */}
         <ul className="flex flex-col gap-2.5">
-          {PARTICIPANTS.map((p) => (
+          {participants.map((p) => (
             <li key={p.id} className="flex items-center gap-2.5">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-white font-body font-bold text-xs shrink-0"
@@ -174,7 +198,7 @@ export function RightPanelDashboard() {
             Chat del Grupo
           </p>
           <div className="flex -space-x-1">
-            {PARTICIPANTS.filter((p) => p.isOnline).map((p) => (
+            {participants.filter((p) => p.isOnline).map((p) => (
               <div
                 key={p.id}
                 className="w-5 h-5 rounded-full border border-[#FAF9FD] flex items-center justify-center text-white font-body font-bold text-[9px] shrink-0"
@@ -196,7 +220,7 @@ export function RightPanelDashboard() {
                 {!msg.isOwn && (
                   <div
                     className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-white font-body font-bold text-[10px] mt-4"
-                    style={{ backgroundColor: getParticipantColor(msg.author) }}
+                    style={{ backgroundColor: getParticipantColor(msg.author, participants) }}
                   >
                     {msg.author?.[0] ?? '?'}
                   </div>
