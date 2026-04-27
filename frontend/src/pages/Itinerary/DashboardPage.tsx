@@ -8,6 +8,7 @@ import type { Activity as DayActivity, DayViewHandle } from '../../components/ui
 import { ProposalCard } from '../../components/ProposalCard/ProposalCard'
 import { ComparisonPage } from '../Comparison/ComparisonPage'
 import { ITINERARY_DAYS } from '../../mock/itinerary.mock'
+import { useLocation } from 'react-router-dom'
 
 
 
@@ -311,6 +312,9 @@ export function DashboardPage() {
   const [searchParams] = useSearchParams()
   const { localUser, accessToken } = useAuth()
 
+  const location = useLocation()
+  const groupIdFromState = location.state?.groupId
+
   const groupId = searchParams.get('groupId')
   const currentGroup = getCurrentGroup()
 
@@ -327,7 +331,8 @@ export function DashboardPage() {
   const [activeTab,   setActiveTab]   = useState('pagar')
   const [isLoading,   setIsLoading]   = useState(false)
   const [days,        setDays]        = useState(ITINERARY_DAYS)
-
+  const [group, setGroup] = useState<typeof currentGroup>(currentGroup)
+  const [members, setMembers] = useState<Parameters<typeof RightPanelDashboard>[0]['members']>([])
   const dayRefs = useRef<Record<number, DayViewHandle | null>>({})
 
   const handleDayChange = useCallback((dayNumber: number) => {
@@ -344,50 +349,57 @@ export function DashboardPage() {
   const selectedDay = activeDay !== null ? days.find((day) => day.dayNumber === activeDay) : undefined
 
   useEffect(() => {
-    const resolvedGroupId = groupId || currentGroup?.id
+  const resolvedGroupId = groupIdFromState || groupId || currentGroup?.id
 
-    if (!resolvedGroupId || !accessToken) return
+  if (!resolvedGroupId) {
+    navigate('/my-trips')
+    return
+  }
 
-    let isMounted = true
+  if (!accessToken) return
 
-    const loadItinerary = async () => {
-      try {
-        if (isMounted) {
-          setIsLoading(true)
-        }
+  let isMounted = true
 
-        const response = await groupsService.getItinerary(resolvedGroupId, accessToken)
+  const loadDashboard = async () => {
+    try {
+      setIsLoading(true)
 
-        if (isMounted) {
-          setDays(response.days)
-        }
-      } catch (error) {
-        console.error('Error cargando itinerario:', error)
+      const groupRes = await groupsService.getGroupDetails(resolvedGroupId, accessToken)
+      const membersRes = await groupsService.getMembers(resolvedGroupId, accessToken)
+      const itineraryRes = await groupsService.getItinerary(resolvedGroupId, accessToken)
 
-        if (isMounted) {
-          setDays([])
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
+      if (isMounted) {
+        setGroup(groupRes.group)
+        setMembers(membersRes.members)
+        setDays(itineraryRes.days)
+      }
+    } catch (error) {
+      console.error('Error cargando dashboard:', error)
+
+      if (isMounted) {
+        setDays(ITINERARY_DAYS)
+      }
+    } finally {
+      if (isMounted) {
+        setIsLoading(false)
       }
     }
+  }
 
-    void loadItinerary()
+  void loadDashboard()
 
-    return () => {
+  return () => {
       isMounted = false
     }
-  }, [groupId, currentGroup?.id, accessToken])
+  }, [groupIdFromState, groupId, currentGroup?.id, accessToken, navigate])
 
   return (
     <AppLayout
       trip={{
-        name: currentGroup?.nombre || 'Itinerario',
-        subtitle: currentGroup?.destino || 'Destino pendiente',
-        dates: `${currentGroup?.fecha_inicio || '—'} – ${currentGroup?.fecha_fin || '—'}`,
-        people: currentGroup?.maximo_miembros ? `${currentGroup.maximo_miembros} personas máx.` : 'Miembros por definir',
+        name: group?.nombre || 'Itinerario',
+        subtitle: group?.destino || 'Destino pendiente',
+        dates: `${group?.fecha_inicio || '—'} – ${group?.fecha_fin || '—'}`,
+        people: group?.maximo_miembros ? `${group.maximo_miembros} personas máx.` : 'Miembros por definir',
       }}
       user={{
         name: userName,
@@ -407,7 +419,7 @@ export function DashboardPage() {
         />
       }
 
-      rightPanel={<RightPanelDashboard />}
+      rightPanel={<RightPanelDashboard members={members} />}
     >
       {isLoading ? (
         <SkeletonView />
