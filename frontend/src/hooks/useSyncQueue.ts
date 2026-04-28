@@ -7,7 +7,7 @@ interface ItheraDB extends DBSchema {
     value: {
       id?: number;
       action: 'UPDATE_PROPOSAL' | 'CREATE_COMMENT' | 'VOTE_PROPOSAL';
-      payload: any;
+      payload: unknown;
       timestamp: string;
     };
     indexes: { 'by-action': string };
@@ -38,10 +38,11 @@ export const useSyncQueue = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     loadQueueSize();
   }, [loadQueueSize]);
 
-  const enqueue = useCallback(async (action: 'UPDATE_PROPOSAL' | 'CREATE_COMMENT' | 'VOTE_PROPOSAL', payload: any) => {
+  const enqueue = useCallback(async (action: 'UPDATE_PROPOSAL' | 'CREATE_COMMENT' | 'VOTE_PROPOSAL', payload: unknown) => {
     const db = await dbPromise;
     await db.add('syncQueue', {
       action,

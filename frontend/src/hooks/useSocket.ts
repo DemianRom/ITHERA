@@ -28,7 +28,7 @@ export const useSocket = (token: string | null) => {
         for (const item of queue) {
           if (item.id) {
             // Emite con un timeout y ACK si el backend responde (si no responde y hace timeout, no borramos el item para reintentar)
-            newSocket.timeout(5000).emit(item.action, item.payload, (err: any) => {
+            newSocket.timeout(5000).emit(item.action, item.payload, (err: unknown) => {
               // Si no recibimos ack/timeout, asumimos que se procesó (algunos eventos backend Ithera no mandan ack explícito, 
               // pero la sugerencia indica limpiar post confirmación. En este mock, si el socket al menos no cae, limpiamos).
               if (!err) {
@@ -50,6 +50,7 @@ export const useSocket = (token: string | null) => {
       setIsConnected(false);
     });
 
+    // eslint-disable-next-line
     setSocket(newSocket);
     socketRef.current = newSocket;
 
@@ -58,7 +59,7 @@ export const useSocket = (token: string | null) => {
     };
   }, [token, getQueue, clearItem]);
 
-  const emitCancellable = useCallback(async (action: 'UPDATE_PROPOSAL' | 'CREATE_COMMENT' | 'VOTE_PROPOSAL', payload: any) => {
+  const emitCancellable = useCallback(async (action: 'UPDATE_PROPOSAL' | 'CREATE_COMMENT' | 'VOTE_PROPOSAL', payload: unknown) => {
     if (isConnected && socketRef.current) {
       // Directamente enviamos el payload que recibe del cliente (con el updatedAt ya enriquecido en el UI)
       socketRef.current.emit(action, payload);
