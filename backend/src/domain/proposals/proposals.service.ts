@@ -229,8 +229,21 @@ export const updateProposal = async (proposalId: number, authUserId: string, pay
     const dbDate = new Date(proposal.ultima_actualizacion).getTime();
     const payloadDate = new Date(payload.updatedAt).getTime();
     
+    if (Number.isNaN(payloadDate)) {
+      const err = new Error('Invalid updatedAt timestamp.') as Error & { statusCode: number };
+      err.statusCode = 400;
+      throw err;
+    }
+    if (Number.isNaN(dbDate)) {
+      const err = new Error('Invalid proposal update timestamp in storage.') as Error & { statusCode: number };
+      err.statusCode = 500;
+      throw err;
+    }
+    
     if (payloadDate < dbDate) {
-      throw { status: 409, message: 'Conflict: The entity has been modified. Refresh and try again.' };
+      const err = new Error('Conflict: The entity has been modified. Refresh and try again.') as Error & { statusCode: number };
+      err.statusCode = 409;
+      throw err;
     }
   }
 

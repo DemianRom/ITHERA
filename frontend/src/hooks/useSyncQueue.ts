@@ -1,5 +1,5 @@
 import { openDB, DBSchema } from 'idb';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface ItheraDB extends DBSchema {
   syncQueue: {
@@ -26,7 +26,22 @@ const dbPromise = openDB<ItheraDB>('ithera-offline-db', 1, {
 export const useSyncQueue = () => {
   const [queueSize, setQueueSize] = useState(0);
 
-  const enqueue = async (action: 'UPDATE_PROPOSAL' | 'CREATE_COMMENT' | 'VOTE_PROPOSAL', payload: any) => {
+  const getQueue = useCallback(async () => {
+    const db = await dbPromise;
+    return db.getAll('syncQueue');
+  }, []);
+
+  const loadQueueSize = useCallback(async () => {
+    const db = await dbPromise;
+    const count = await db.count('syncQueue');
+    setQueueSize(count);
+  }, []);
+
+  useEffect(() => {
+    loadQueueSize();
+  }, [loadQueueSize]);
+
+  const enqueue = useCallback(async (action: 'UPDATE_PROPOSAL' | 'CREATE_COMMENT' | 'VOTE_PROPOSAL', payload: any) => {
     const db = await dbPromise;
     await db.add('syncQueue', {
       action,
@@ -34,18 +49,13 @@ export const useSyncQueue = () => {
       timestamp: new Date().toISOString(), // LWW timestamp clave
     });
     setQueueSize((prev) => prev + 1);
-  };
+  }, []);
 
-  const getQueue = async () => {
-    const db = await dbPromise;
-    return db.getAll('syncQueue');
-  };
-
-  const clearItem = async (id: number) => {
+  const clearItem = useCallback(async (id: number) => {
     const db = await dbPromise;
     await db.delete('syncQueue', id);
     setQueueSize((prev) => Math.max(0, prev - 1));
-  };
+  }, []);
 
-  return { queueSize, enqueue, getQueue, clearItem };
+  return { queueSize, enqueue, getQueue, clearItem, loadQueueSize };
 };
