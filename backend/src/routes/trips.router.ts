@@ -14,6 +14,10 @@ router.post('/', requireAuth, async (req: Request, res: Response): Promise<void>
       nombre,
       descripcion,
       destino,
+      destino_latitud,
+      destino_longitud,
+      destino_place_id,
+      destino_formatted_address,
       fecha_inicio,
       fecha_fin,
       maximo_miembros,
@@ -21,6 +25,10 @@ router.post('/', requireAuth, async (req: Request, res: Response): Promise<void>
       nombre?: string;
       descripcion?: string;
       destino?: string;
+      destino_latitud?: number | null;
+      destino_longitud?: number | null;
+      destino_place_id?: string | null;
+      destino_formatted_address?: string | null;
       fecha_inicio?: string;
       fecha_fin?: string;
       maximo_miembros?: number;
@@ -35,6 +43,10 @@ router.post('/', requireAuth, async (req: Request, res: Response): Promise<void>
       nombre,
       descripcion,
       destino,
+      destino_latitud,
+      destino_longitud,
+      destino_place_id,
+      destino_formatted_address,
       fecha_inicio,
       fecha_fin,
       maximo_miembros,

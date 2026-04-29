@@ -680,7 +680,11 @@ export const getMyTravelHistory = async (authUserId: string) => {
         maximo_miembros,
         codigo_invitacion,
         estado,
-        created_at
+        created_at,
+        destino_latitud,
+        destino_longitud,
+        destino_place_id,
+        destino_formatted_address
       )
     `)
     .eq('usuario_id', usuarioId);

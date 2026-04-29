@@ -1,20 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getCurrentGroup, groupsService } from '../../services/groups'
+import type { ItineraryDay } from '../../services/groups'
 import { useAuth } from '../../context/useAuth'
 import { AppLayout, RightPanelDashboard, SidebarDashboard } from '../../components/layout/AppLayout'
 import { DayView } from '../../components/ui/DayView'
 import type { Activity as DayActivity, DayViewHandle } from '../../components/ui/DayView'
 import { ProposalCard } from '../../components/ProposalCard/ProposalCard'
 import { ComparisonPage } from '../Comparison/ComparisonPage'
-import { ITINERARY_DAYS } from '../../mock/itinerary.mock'
 import { useLocation } from 'react-router-dom'
-<<<<<<< HEAD
 import { ActivityProposalModal } from '../../components/ActivityProposalModal/ActivityProposalModal'
 import { useSocket } from '../../hooks/useSocket'
-=======
-
->>>>>>> eed698d6c6b8b21e736038e8e8b13dbdc8e85acc
 
 
 function IconDownload({ size = 14 }: { size?: number }) {
@@ -95,7 +91,6 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   )
 }
 
-<<<<<<< HEAD
 function HeroCard({
   activeDay,
   totalDays,
@@ -116,41 +111,39 @@ function HeroCard({
   const heroImage =
     group?.destino_photo_url ||
     'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&h=400&fit=crop'
-=======
-function HeroCard({ activeDay }: { activeDay: number | null }) {
-  const totalDays = ITINERARY_DAYS.length
->>>>>>> eed698d6c6b8b21e736038e8e8b13dbdc8e85acc
 
   return (
     <div className="relative mb-4 h-52 shrink-0 overflow-hidden rounded-2xl">
       <img
-<<<<<<< HEAD
         src={heroImage}
         alt={destination}
-=======
-        src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&h=400&fit=crop"
-        alt="Cancún"
->>>>>>> eed698d6c6b8b21e736038e8e8b13dbdc8e85acc
         className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
       <div className="absolute left-4 top-4 flex gap-2">
         <span className="rounded-full bg-white/20 px-3 py-1 font-body text-[11px] font-bold text-white backdrop-blur-sm">
-          {activeDay !== null ? `DÍA ${activeDay} / ${totalDays}` : 'CANCÚN 2025'}
+          {activeDay !== null ? `DÍA ${activeDay} / ${totalDays}` : `${destination.toUpperCase()}`}
         </span>
         <span className="rounded-full bg-white/20 px-3 py-1 font-body text-[11px] font-bold text-white backdrop-blur-sm">
-          16 JUNIO 2025
+          {dateLabel}
         </span>
       </div>
       <div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
-        <h1 className="mb-1 font-heading text-[28px] font-bold leading-tight text-white">Llegada a Cancún</h1>
-        <p className="mb-3 font-body text-[13px] text-white/70">3 actividades planeadas · 1 pendiente de confirmación</p>
+        <h1 className="mb-1 font-heading text-[28px] font-bold leading-tight text-white">
+          {activeDay !== null ? `Día ${activeDay}` : destination}
+        </h1>
+        <p className="mb-3 font-body text-[13px] text-white/70">
+          {activities.length} actividad{activities.length !== 1 ? 'es' : ''} planeada{activities.length !== 1 ? 's' : ''} · {pending} pendiente{pending !== 1 ? 's' : ''} de confirmación
+        </p>
         <div className="flex gap-2">
           <button className="inline-flex items-center gap-1.5 rounded-lg border border-white/50 px-4 py-2 font-body text-sm font-medium text-white transition-colors hover:bg-white/10">
             <IconDownload size={13} />
             Exportar PDF
           </button>
-          <button className="inline-flex items-center gap-1.5 rounded-lg bg-greenAccent px-4 py-2 font-body text-sm font-medium text-white transition-opacity hover:opacity-90">
+          <button
+            onClick={onAdd}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-greenAccent px-4 py-2 font-body text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
             <IconPlus size={13} />
             Proponer actividad
           </button>
@@ -364,10 +357,13 @@ export function DashboardPage() {
   const [expandedDay, setExpandedDay] = useState<number | null>(null)
   const [activeTab,   setActiveTab]   = useState('pagar')
   const [isLoading,   setIsLoading]   = useState(false)
-  const [days,        setDays]        = useState(ITINERARY_DAYS)
+  const [days,        setDays]        = useState<ItineraryDay[]>([])
   const [group, setGroup] = useState<typeof currentGroup>(currentGroup)
   const [members, setMembers] = useState<Parameters<typeof RightPanelDashboard>[0]['members']>([])
   const dayRefs = useRef<Record<number, DayViewHandle | null>>({})
+  const [showActivityModal, setShowActivityModal] = useState(false)
+  const [selectedActivityDay, setSelectedActivityDay] = useState<number | null>(null)
+  const [editingActivity, setEditingActivity] = useState<DayActivity | null>(null)
 
   const handleDayChange = useCallback((dayNumber: number) => {
     const next = activeDay === dayNumber ? null : dayNumber
@@ -375,9 +371,16 @@ export function DashboardPage() {
     setExpandedDay(next)
   }, [activeDay])
 
-  const handleDayExpand = useCallback((dayNumber: number) => {
-    setExpandedDay((prev) => prev === dayNumber ? null : dayNumber)
+  const openActivityModalForDay = useCallback((dayNumber: number) => {
+    setActiveDay(dayNumber)
+    setExpandedDay(dayNumber)
+    setSelectedActivityDay(dayNumber)
+    setShowActivityModal(true)
   }, [])
+
+  // const handleDayExpand = useCallback((dayNumber: number) => {
+  //   setExpandedDay((prev) => prev === dayNumber ? null : dayNumber)
+  // }, [])
 
   const isEmpty = days.length === 0
   const selectedDay = activeDay !== null ? days.find((day) => day.dayNumber === activeDay) : undefined
@@ -411,7 +414,7 @@ export function DashboardPage() {
       console.error('Error cargando dashboard:', error)
 
       if (isMounted) {
-        setDays(ITINERARY_DAYS)
+        setDays([])
       }
     } finally {
       if (isMounted) {
@@ -426,6 +429,24 @@ export function DashboardPage() {
       isMounted = false
     }
   }, [groupIdFromState, groupId, currentGroup?.id, accessToken, navigate])
+
+  const reloadDashboard = useCallback(async () => {
+    const resolvedGroupId = groupIdFromState || groupId || currentGroup?.id
+
+    if (!resolvedGroupId || !accessToken) return
+
+    const itineraryRes = await groupsService.getItinerary(resolvedGroupId, accessToken)
+    setDays(itineraryRes.days)
+  }, [groupIdFromState, groupId, currentGroup?.id, accessToken])
+
+  const handleDeleteActivity = useCallback(async (activityId: string) => {
+    const resolvedGroupId = groupIdFromState || groupId || currentGroup?.id
+
+    if (!resolvedGroupId || !accessToken) return
+
+    await groupsService.deleteActivity(String(resolvedGroupId), activityId, accessToken)
+    await reloadDashboard()
+  }, [groupIdFromState, groupId, currentGroup?.id, accessToken, reloadDashboard])
 
   return (
     <AppLayout
@@ -446,6 +467,7 @@ export function DashboardPage() {
       sidebarContent={
         <SidebarDashboard
           activeDay={activeDay}
+          days={days}
           onDayChange={handleDayChange}
           onOpenGroupPanel={() =>
             navigate(`/grouppanel?groupId=${encodeURIComponent(groupId || currentGroup?.id || '')}`)
@@ -453,7 +475,6 @@ export function DashboardPage() {
         />
       }
 
-<<<<<<< HEAD
       rightPanel={
         <RightPanelDashboard
           members={members}
@@ -466,47 +487,43 @@ export function DashboardPage() {
           currentUserName={userName}
         />
       }
-=======
-      rightPanel={<RightPanelDashboard members={members} />}
->>>>>>> eed698d6c6b8b21e736038e8e8b13dbdc8e85acc
     >
       {isLoading ? (
         <SkeletonView />
       ) : isEmpty ? (
-        <EmptyState onAdd={() => {}} />
+        <EmptyState onAdd={() => setShowActivityModal(true)} />
       ) : activeTab === 'comparar' ? (
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <ComparisonPage onBack={() => setActiveTab('pagar')} />
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
-          <HeroCard activeDay={activeDay} />
+          <HeroCard
+            activeDay={activeDay}
+            totalDays={days.length}
+            selectedDay={selectedDay}
+            group={group}
+            onAdd={() => openActivityModalForDay(activeDay ?? days[0]?.dayNumber ?? 1)}
+          />
           <InfoBanner />
           <TimelineStrip activeDay={activeDay} date={selectedDay?.date} activities={selectedDay?.activities} />
           <div className="flex flex-col gap-3">
             {days.map((day) => (
-              <DayView
-                key={day.dayNumber}
-                ref={(handle) => {
-                  dayRefs.current[day.dayNumber] = handle
-                }}
-                dayNumber={day.dayNumber}
-                date={day.date}
-                activities={day.activities}
-                isActive={day.dayNumber === activeDay}
-                isExpanded={day.dayNumber === expandedDay}
-                onSelect={handleDayExpand}
-                onAccept={(id) => console.log('aceptar', id)}
-                onDelete={(id) => {
-                  setDays((prev) =>
-                    prev.map((d) =>
-                      d.dayNumber === day.dayNumber
-                        ? { ...d, activities: d.activities.filter((a) => a.id !== id) }
-                        : d
-                    )
-                  )
-                }}
-              />
+            <DayView
+              key={day.dayNumber}
+              ref={(handle) => {
+                dayRefs.current[day.dayNumber] = handle
+              }}
+              dayNumber={day.dayNumber}
+              date={day.date}
+              activities={day.activities}
+              isActive={day.dayNumber === activeDay}
+              isExpanded={day.dayNumber === expandedDay}
+              onSelect={handleDayChange}
+              onAddActivity={openActivityModalForDay}
+              onAccept={(id) => console.log('aceptar', id)}
+              onDelete={(id) => void handleDeleteActivity(id)}
+            />
             ))}
           </div>
 
@@ -526,13 +543,13 @@ export function DashboardPage() {
                       activity={activity}
                       proposalStatus="pendiente"
                       onAccept={(id) => console.log('aceptar', id)}
-                      onDelete={(id) => {
-                        setDays((prev) =>
-                          prev.map((d) => ({
-                            ...d,
-                            activities: d.activities.filter((a) => a.id !== id),
-                          }))
-                        )
+                      onDelete={(id) => void handleDeleteActivity(id)}
+                      onEdit={(id) => {
+                        const activity = days.flatMap((d) => d.activities).find((a) => a.id === id)
+                        if (activity) {
+                          setEditingActivity(activity)
+                          setShowActivityModal(true)
+                        }
                       }}
                     />
                   ))}
@@ -542,6 +559,19 @@ export function DashboardPage() {
           })()}
         </div>
       )}
+
+      <ActivityProposalModal
+        open={showActivityModal}
+        group={group}
+        token={accessToken}
+        selectedDayNumber={selectedActivityDay}
+        onClose={() => {
+          setEditingActivity(null)
+          setShowActivityModal(false)
+        }}
+        onCreated={reloadDashboard}
+        editingActivity={editingActivity}
+      />
 
       <BottomNavbar activeTab={activeTab} onTabChange={setActiveTab} />
     </AppLayout>

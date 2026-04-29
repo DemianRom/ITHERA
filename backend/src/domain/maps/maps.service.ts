@@ -1,5 +1,21 @@
-import { googleComputeRoute, googleGeocode, googleNearbyPlaces } from '../../infrastructure/external-apis/googlemaps.service';
+import {
+  googleComputeRoute,
+  googleGeocode,
+  googleNearbyPlaces,
+  googlePlaceAutocomplete,
+  googlePlaceDetails,
+  googlePlacePhotoMedia,
+  googleTextSearchPlaces,
+} from '../../infrastructure/external-apis/googlemaps.service';
 import { ComputeRouteParams, GeocodingResult, NearbyPlacesParams, PlaceResult, RouteResult, RouteStep } from './maps.entity';
+
+interface GooglePhoto {
+  name?: string;
+}
+
+interface GooglePhotoMediaResponse {
+  photoUri?: string;
+}
 
 interface GoogleGeocodingResponse {
   results?: Array<{
@@ -44,7 +60,55 @@ interface GooglePlacesResponse {
     formattedAddress?: string;
     location?: { latitude?: number; longitude?: number };
     types?: string[];
+    photos?: GooglePhoto[];
   }>;
+}
+
+interface GoogleAutocompleteResponse {
+  suggestions?: Array<{
+    placePrediction?: {
+      placeId?: string;
+      text?: { text?: string };
+      structuredFormat?: {
+        mainText?: { text?: string };
+        secondaryText?: { text?: string };
+      };
+    };
+  }>;
+}
+
+interface GooglePlaceDetailsResponse {
+  id?: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  location?: {
+    latitude?: number;
+    longitude?: number;
+  };
+  types?: string[];
+  photos?: GooglePhoto[];
+}
+
+interface GoogleTextSearchResponse {
+  places?: Array<{
+    id?: string;
+    displayName?: { text?: string };
+    formattedAddress?: string;
+    location?: { latitude?: number; longitude?: number };
+    types?: string[];
+    photos?: GooglePhoto[];
+  }>;
+}
+
+async function resolvePhotoUrl(photoName?: string | null): Promise<string | null> {
+  if (!photoName) return null;
+
+  try {
+    const media = await googlePlacePhotoMedia<GooglePhotoMediaResponse>(photoName, 900);
+    return media.photoUri ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function geocodeAddress(address: string): Promise<GeocodingResult | null> {
@@ -113,7 +177,6 @@ export async function searchNearbyPlaces(params: NearbyPlacesParams): Promise<Pl
     },
   });
 
-<<<<<<< HEAD
   return Promise.all(
     (response.places ?? []).map(async (place) => {
       const photoName = place.photos?.[0]?.name ?? null;
@@ -208,14 +271,3 @@ export async function searchPlacesByText(params: {
     })
   );
 }
-=======
-  return (response.places ?? []).map((place) => ({
-    id: place.id ?? null,
-    name: place.displayName?.text ?? null,
-    formattedAddress: place.formattedAddress ?? null,
-    latitude: place.location?.latitude ?? null,
-    longitude: place.location?.longitude ?? null,
-    primaryCategory: place.types?.[0] ?? null,
-  }));
-}
->>>>>>> eed698d6c6b8b21e736038e8e8b13dbdc8e85acc
