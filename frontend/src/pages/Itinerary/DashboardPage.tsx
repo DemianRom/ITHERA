@@ -353,11 +353,11 @@ export function DashboardPage() {
     .slice(0, 2)
     .toUpperCase()
 
-  const [activeDay,   setActiveDay]   = useState<number | null>(null)
+  const [activeDay, setActiveDay] = useState<number | null>(null)
   const [expandedDay, setExpandedDay] = useState<number | null>(null)
-  const [activeTab,   setActiveTab]   = useState('pagar')
-  const [isLoading,   setIsLoading]   = useState(false)
-  const [days,        setDays]        = useState<ItineraryDay[]>([])
+  const [activeTab, setActiveTab] = useState('pagar')
+  const [isLoading, setIsLoading] = useState(false)
+  const [days, setDays] = useState<ItineraryDay[]>([])
   const [group, setGroup] = useState<typeof currentGroup>(currentGroup)
   const [members, setMembers] = useState<Parameters<typeof RightPanelDashboard>[0]['members']>([])
   const dayRefs = useRef<Record<number, DayViewHandle | null>>({})
@@ -386,46 +386,46 @@ export function DashboardPage() {
   const selectedDay = activeDay !== null ? days.find((day) => day.dayNumber === activeDay) : undefined
 
   useEffect(() => {
-  const resolvedGroupId = groupIdFromState || groupId || currentGroup?.id
+    const resolvedGroupId = groupIdFromState || groupId || currentGroup?.id
 
-  if (!resolvedGroupId) {
-    navigate('/my-trips')
-    return
-  }
+    if (!resolvedGroupId) {
+      navigate('/my-trips')
+      return
+    }
 
-  if (!accessToken) return
+    if (!accessToken) return
 
-  let isMounted = true
+    let isMounted = true
 
-  const loadDashboard = async () => {
-    try {
-      setIsLoading(true)
+    const loadDashboard = async () => {
+      try {
+        setIsLoading(true)
 
-      const groupRes = await groupsService.getGroupDetails(resolvedGroupId, accessToken)
-      const membersRes = await groupsService.getMembers(resolvedGroupId, accessToken)
-      const itineraryRes = await groupsService.getItinerary(resolvedGroupId, accessToken)
+        const groupRes = await groupsService.getGroupDetails(resolvedGroupId, accessToken)
+        const membersRes = await groupsService.getMembers(resolvedGroupId, accessToken)
+        const itineraryRes = await groupsService.getItinerary(resolvedGroupId, accessToken)
 
-      if (isMounted) {
-        setGroup(groupRes.group)
-        setMembers(membersRes.members)
-        setDays(itineraryRes.days)
-      }
-    } catch (error) {
-      console.error('Error cargando dashboard:', error)
+        if (isMounted) {
+          setGroup(groupRes.group)
+          setMembers(membersRes.members)
+          setDays(itineraryRes.days)
+        }
+      } catch (error) {
+        console.error('Error cargando dashboard:', error)
 
-      if (isMounted) {
-        setDays([])
-      }
-    } finally {
-      if (isMounted) {
-        setIsLoading(false)
+        if (isMounted) {
+          setDays([])
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
-  }
 
-  void loadDashboard()
+    void loadDashboard()
 
-  return () => {
+    return () => {
       isMounted = false
     }
   }, [groupIdFromState, groupId, currentGroup?.id, accessToken, navigate])
@@ -494,7 +494,7 @@ export function DashboardPage() {
         <EmptyState onAdd={() => setShowActivityModal(true)} />
       ) : activeTab === 'comparar' ? (
         <div className="flex-1 overflow-y-auto px-4 py-6">
-          <ComparisonPage onBack={() => setActiveTab('pagar')} />
+          <ComparisonPage groupId={groupId} onBack={() => setActiveTab('pagar')} />
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
@@ -509,21 +509,21 @@ export function DashboardPage() {
           <TimelineStrip activeDay={activeDay} date={selectedDay?.date} activities={selectedDay?.activities} />
           <div className="flex flex-col gap-3">
             {days.map((day) => (
-            <DayView
-              key={day.dayNumber}
-              ref={(handle) => {
-                dayRefs.current[day.dayNumber] = handle
-              }}
-              dayNumber={day.dayNumber}
-              date={day.date}
-              activities={day.activities}
-              isActive={day.dayNumber === activeDay}
-              isExpanded={day.dayNumber === expandedDay}
-              onSelect={handleDayChange}
-              onAddActivity={openActivityModalForDay}
-              onAccept={(id) => console.log('aceptar', id)}
-              onDelete={(id) => void handleDeleteActivity(id)}
-            />
+              <DayView
+                key={day.dayNumber}
+                ref={(handle) => {
+                  dayRefs.current[day.dayNumber] = handle
+                }}
+                dayNumber={day.dayNumber}
+                date={day.date}
+                activities={day.activities}
+                isActive={day.dayNumber === activeDay}
+                isExpanded={day.dayNumber === expandedDay}
+                onSelect={handleDayChange}
+                onAddActivity={openActivityModalForDay}
+                onAccept={(id) => console.log('aceptar', id)}
+                onDelete={(id) => void handleDeleteActivity(id)}
+              />
             ))}
           </div>
 
