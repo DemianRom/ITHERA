@@ -493,9 +493,15 @@ export function DashboardPage() {
       ) : isEmpty ? (
         <EmptyState onAdd={() => setShowActivityModal(true)} />
       ) : activeTab === 'comparar' ? (
-        <div className="flex-1 overflow-y-auto px-4 py-6">
-          <ComparisonPage groupId={groupId} onBack={() => setActiveTab('pagar')} />
-        </div>
+        groupId ? (
+          <div className="flex-1 overflow-y-auto px-4 py-6">
+            <ComparisonPage groupId={groupId} onBack={() => setActiveTab('pagar')} />
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center px-4 py-6">
+            <p className="text-center text-gray-500">Grupo no encontrado. Verifica la URL.</p>
+          </div>
+        )
       ) : (
         <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
           <HeroCard

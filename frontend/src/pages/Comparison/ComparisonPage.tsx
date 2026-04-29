@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useEffect } from 'react';
-import { getGroupProposals } from '../../services/proposals';
 import { useAuth } from '../../context/useAuth';
-import { voteProposal } from '../../services/proposals';
+import { proposalsService } from '../../services/proposals';
+
 
 export interface ComparisonPageProps {
   groupId: string;
@@ -147,24 +147,25 @@ export function ComparisonPage({ groupId, onBack }: ComparisonPageProps) {
 
 
   useEffect(() => {
-    if (!groupId) return;
+    if (!groupId || !accessToken) return;
     setLoading(true);
-    getGroupProposals(groupId, accessToken)
-      .then(proposals => {
-        const mapped = proposals.map(p => ({
+    proposalsService.getGroupProposals(groupId, accessToken)
+      .then(res => {
+        const mapped = res.proposals.map(p => ({
           id: p.id,
           title: p.titulo,
           price: p.precio,
-          category: p.tipo === 'vuelo' ? 'transporte' : 'hospedaje',
-          airline: p.aerolinea ?? undefined,
-          duration: p.duracion ?? undefined,
-          rating: p.calificacion ?? undefined,
+          category: p.tipo === 'vuelo' ? 'transporte' : p.tipo === 'hotel' ? 'hospedaje' : 'actividad',
+          duration: p.duracion ?? 'N/A',
+          location: p.ubicacion ?? 'Ubicación pendiente',
+          climate: p.clima ?? 'Clima pendiente',
+          image: p.imagen ?? 'https://via.placeholder.com/150',
         }));
         setOptions(mapped);
       })
       .catch(() => setError('No se pudieron cargar las propuestas'))
       .finally(() => setLoading(false));
-  }, [groupId]);
+  }, [groupId, accessToken]);
 
   function removeOption(id: string) {
     if (options.length <= 1) return
@@ -362,8 +363,9 @@ export function ComparisonPage({ groupId, onBack }: ComparisonPageProps) {
 
           <button
             onClick={async () => {
+              if (!selectedOption || !accessToken) return;
               try {
-                await voteProposal(groupId, selectedOption.id, { voto: 'aceptar' }, accessToken);
+                await proposalsService.voteProposal(groupId, selectedOption.id, { voto: 'a_favor' }, accessToken);
                 setProposed(true);
               } catch {
                 alert('No se pudo confirmar la propuesta. Intenta de nuevo.');
