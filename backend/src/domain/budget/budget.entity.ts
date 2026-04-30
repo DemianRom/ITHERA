@@ -3,41 +3,41 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeor
 @Entity('expenses')
 export class Expense {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('uuid')
-  groupId: string;
+  groupId!: string;
 
   @Column('uuid')
-  paidByUserId: string;
+  paidByUserId!: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
-  amount: number;
+  amount!: number;
 
   @Column()
-  description: string;
+  description!: string;
 
   @Column()
-  category: string;
+  category!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 }
 
 @Entity('expense_splits')
 export class ExpenseSplit {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('uuid')
-  expenseId: string;
+  expenseId!: string;
 
   @Column('uuid')
-  userId: string;
+  userId!: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
-  share: number;
+  share!: number;
 
   @Column({ default: false })
-  settled: boolean;
+  settled!: boolean;
 }
