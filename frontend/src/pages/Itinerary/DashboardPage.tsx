@@ -13,6 +13,7 @@ import { ComparisonPage } from '../Comparison/ComparisonPage'
 import { ProposalDetailModal } from '../../components/ProposalDetailModal/ProposalDetailModal'
 import { ConfirmProposalModal } from '../../components/ConfirmProposalModal/ConfirmProposalModal'
 import { ActivityProposalModal } from '../../components/ActivityProposalModal/ActivityProposalModal'
+import { BudgetDashboard } from '../../components/budget/BudgetDashboard'
 import { useSocket } from '../../hooks/useSocket'
 import type { Group } from '../../types/groups'
 
@@ -1041,6 +1042,10 @@ export function DashboardPage() {
       ) : activeTab === 'mapas' ? (
         <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
           <MapsTabView days={days} />
+        </div>
+      ) : activeTab === 'pagar' ? (
+        <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
+          <BudgetDashboard groupId={resolvedGroupId ?? null} />
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
