@@ -476,10 +476,23 @@ const isMissingVoteTypeColumnError = (error: { message?: string } | null | undef
 };
 
 const fetchVotesWithFallback = async (proposalIds: string[] | number[]) => {
-	const { data, error } = await supabase
-		.from('voto')
-		.select('id_propuesta, voto_tipo, id_usuario')
-		.in('id_propuesta', proposalIds as any);
+	const voteTable = supabase.from('voto') as any;
+	const selectWithType = voteTable.select('id_propuesta, voto_tipo, id_usuario') as any;
+
+	let voteQueryResult: { data: any; error: any } = { data: null, error: null };
+
+	if (proposalIds.length === 1 && typeof selectWithType?.eq === 'function') {
+		voteQueryResult = await selectWithType.eq('id_propuesta', proposalIds[0]);
+	} else if (typeof selectWithType?.in === 'function') {
+		voteQueryResult = await selectWithType.in('id_propuesta', proposalIds as any);
+	} else if (typeof selectWithType?.eq === 'function') {
+		// Fallback de compatibilidad para mocks o clientes sin `.in`
+		voteQueryResult = await selectWithType.eq('id_propuesta', proposalIds[0]);
+	} else {
+		throw createError('No se pudo construir la consulta de votos', 500);
+	}
+
+	const { data, error } = voteQueryResult;
 
 	if (!error) {
 		return {
@@ -495,10 +508,20 @@ const fetchVotesWithFallback = async (proposalIds: string[] | number[]) => {
 		throw createError(error.message, 500);
 	}
 
-	const fallback = await supabase
-		.from('voto')
-		.select('id_propuesta, id_usuario')
-		.in('id_propuesta', proposalIds as any);
+	const fallbackTable = supabase.from('voto') as any;
+	const fallbackSelect = fallbackTable.select('id_propuesta, id_usuario') as any;
+
+	let fallback: { data: any; error: any } = { data: null, error: null };
+
+	if (proposalIds.length === 1 && typeof fallbackSelect?.eq === 'function') {
+		fallback = await fallbackSelect.eq('id_propuesta', proposalIds[0]);
+	} else if (typeof fallbackSelect?.in === 'function') {
+		fallback = await fallbackSelect.in('id_propuesta', proposalIds as any);
+	} else if (typeof fallbackSelect?.eq === 'function') {
+		fallback = await fallbackSelect.eq('id_propuesta', proposalIds[0]);
+	} else {
+		throw createError('No se pudo construir la consulta de votos (fallback)', 500);
+	}
 
 	if (fallback.error) throw createError(fallback.error.message, 500);
 
