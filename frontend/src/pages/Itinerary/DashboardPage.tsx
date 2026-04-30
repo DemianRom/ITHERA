@@ -530,11 +530,11 @@ export function DashboardPage() {
     (member): member is NonNullable<NonNullable<typeof members>[number]> => Boolean(member),
   )
   const uniqueMemberCount = new Set(safeMembers.map((member) => String(member.usuario_id ?? member.id))).size
-  const currentMemberRole =
-    safeMembers.find((member) => String(member.usuario_id ?? member.id) === String(localUser?.id_usuario))?.rol ??
-    currentGroup?.myRole ??
-    'viajero'
-  const isCurrentUserAdmin = currentMemberRole === 'admin'
+  const currentMember = safeMembers.find(
+    (member) => String(member.usuario_id ?? member.id) === String(localUser?.id_usuario)
+  )
+  const currentUserRole = currentMember?.rol ?? group?.myRole ?? currentGroup?.myRole ?? 'viajero'
+  const isCurrentUserAdmin = currentUserRole === 'admin' || currentUserRole === 'organizador'
 
   useEffect(() => {
   const resolvedGroupId = groupIdFromState || groupId || currentGroup?.id
@@ -890,6 +890,8 @@ export function DashboardPage() {
               dayNumber={day.dayNumber}
               date={day.date}
               activities={day.activities}
+              currentUserId={localUser?.id_usuario}
+              currentUserRole={currentUserRole}
               isActive={day.dayNumber === activeDay}
               isExpanded={day.dayNumber === expandedDay}
               onSelect={handleDayChange}
@@ -923,12 +925,14 @@ export function DashboardPage() {
                     <div key={activity.id} className="rounded-2xl border border-transparent">
                       <ProposalCard
                         activity={activity}
+                        currentUserId={localUser?.id_usuario}
+                        currentUserRole={currentUserRole}
                         proposalStatus={
                           activity.status === 'confirmada'
                             ? 'bloqueada'
                           : acceptingActivityId === activity.id
                             ? 'procesando'
-                          : (activity.proposalId && voteResultByProposal[activity.proposalId]?.mi_voto) || votedActivityIds[activity.id]
+                          : (activity.proposalId && voteResultByProposal[activity.proposalId]?.mi_voto) || activity.hasVoted || votedActivityIds[activity.id]
                             ? 'votada'
                           : activity.proposalId && lockedProposalIds[activity.proposalId]
                             ? 'bloqueada'
