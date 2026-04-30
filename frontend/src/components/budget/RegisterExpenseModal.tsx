@@ -28,26 +28,29 @@ export const RegisterExpenseModal: FC<Props> = ({ open, members, editingExpense,
 
   useEffect(() => {
     if (!open) return
-    if (editingExpense) {
-      setAmount(String(editingExpense.monto))
-      setDescription(editingExpense.titulo)
-      setCategory(editingExpense.categoria)
-      setPaidBy(editingExpense.pagadoPor)
-      setSplitType(editingExpense.splitType ?? 'equitativa')
-      setSplitAmounts(
-        Object.fromEntries(
-          Object.entries(editingExpense.splitAmounts ?? {}).map(([k, v]) => [k, String(v)])
+    const reset = () => {
+      if (editingExpense) {
+        setAmount(String(editingExpense.monto))
+        setDescription(editingExpense.titulo)
+        setCategory(editingExpense.categoria)
+        setPaidBy(editingExpense.pagadoPor)
+        setSplitType(editingExpense.splitType ?? 'equitativa')
+        setSplitAmounts(
+          Object.fromEntries(
+            Object.entries(editingExpense.splitAmounts ?? {}).map(([k, v]) => [k, String(v)])
+          )
         )
-      )
-    } else {
-      setAmount('')
-      setDescription('')
-      setCategory('transporte')
-      setPaidBy(members[0] ?? '')
-      setSplitType('equitativa')
-      setSplitAmounts({})
+      } else {
+        setAmount('')
+        setDescription('')
+        setCategory('transporte')
+        setPaidBy(members[0] ?? '')
+        setSplitType('equitativa')
+        setSplitAmounts({})
+      }
     }
-  }, [open, editingExpense])
+    reset()
+  }, [open, editingExpense]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open) return null
 

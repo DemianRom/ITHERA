@@ -78,6 +78,7 @@ interface Props {
   groupId: string | null
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const BudgetDashboard: FC<Props> = ({ groupId: _groupId }) => {
   const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES)
   const [showModal, setShowModal] = useState(false)

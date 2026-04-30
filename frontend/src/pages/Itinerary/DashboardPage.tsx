@@ -1043,6 +1043,10 @@ export function DashboardPage() {
         <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
           <MapsTabView days={days} />
         </div>
+      ) : activeTab === 'pagar' ? (
+        <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
+          <BudgetDashboard groupId={resolvedGroupId ?? null} />
+        </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-surface px-6 py-6">
           <HeroCard
