@@ -5,6 +5,12 @@ import { proposalsService } from '../../services/proposals'
 import type { Group } from '../../types/groups'
 import type { Activity } from '../ui/DayView/DayView'
 
+type EnrichedPlaceResult = PlaceResult & {
+  routeDistanceText?: string | null
+  routeDurationText?: string | null
+  routeDistanceMeters?: number | null
+}
+
 type ActivityProposalModalProps = {
   open: boolean
   group: Group | null
@@ -34,8 +40,8 @@ export function ActivityProposalModal({
   const [query, setQuery] = useState('')
   const [description, setDescription] = useState('')
   const [timeValue, setTimeValue] = useState('12:00')
-  const [results, setResults] = useState<PlaceResult[]>([])
-  const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null)
+  const [results, setResults] = useState<EnrichedPlaceResult[]>([])
+  const [selectedPlace, setSelectedPlace] = useState<EnrichedPlaceResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -93,12 +99,52 @@ export function ActivityProposalModal({
           latitude: group?.destino_latitud ?? undefined,
           longitude: group?.destino_longitud ?? undefined,
           radius: 7000,
-          maxResultCount: 8,
+          maxResultCount: 10,
         },
         token
       )
 
-      setResults(response.data ?? [])
+      const fetchedResults: EnrichedPlaceResult[] = response.data ?? []
+
+      const originLat = group?.destino_latitud
+      const originLng = group?.destino_longitud
+
+      if (originLat != null && originLng != null && fetchedResults.length > 0) {
+        const topResults = fetchedResults.slice(0, 10)
+        
+        await Promise.all(topResults.map(async (place) => {
+          if (place.latitude != null && place.longitude != null) {
+            try {
+              const routeResponse = await mapsService.computeRoute(
+                {
+                  originLat,
+                  originLng,
+                  destinationLat: place.latitude,
+                  destinationLng: place.longitude,
+                  travelMode: 'DRIVE',
+                },
+                token
+              )
+              
+              place.routeDistanceText = routeResponse.data?.distanceText ?? null
+              place.routeDurationText = routeResponse.data?.durationText ?? routeResponse.data?.staticDurationText ?? null
+              place.routeDistanceMeters = routeResponse.data?.distanceMeters ?? null
+            } catch {
+              // Ignorar error de ruta
+            }
+          }
+        }))
+
+        topResults.sort((a, b) => {
+          const distA = a.routeDistanceMeters ?? Infinity
+          const distB = b.routeDistanceMeters ?? Infinity
+          return distA - distB
+        })
+
+        setResults(topResults)
+      } else {
+        setResults(fetchedResults)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudieron buscar lugares.')
     } finally {
@@ -116,7 +162,7 @@ export function ActivityProposalModal({
     const yyyy = selectedDate.getFullYear()
     const mm = String(selectedDate.getMonth() + 1).padStart(2, '0')
     const dd = String(selectedDate.getDate()).padStart(2, '0')
-    return new Date(`${yyyy}-${mm}-${dd}T${timeValue}:00`).toISOString()
+    return `${yyyy}-${mm}-${dd}T${timeValue}:00`
   }
 
   const buildActivityPayload = () => {
@@ -327,6 +373,17 @@ export function ActivityProposalModal({
                     <p className="mt-0.5 font-body text-xs text-gray500">
                       {place.formattedAddress || 'Direccion no disponible'}
                     </p>
+                    {place.routeDistanceText && place.routeDurationText && (
+                      <p className="mt-1 flex items-center gap-1 font-body text-[11px] text-gray700">
+                        <span className="text-bluePrimary">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" />
+                            <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="2" />
+                          </svg>
+                        </span>
+                        {place.routeDistanceText} · {place.routeDurationText}
+                      </p>
+                    )}
                     {place.primaryCategory && (
                       <p className="mt-1 font-body text-[11px] text-bluePrimary">{place.primaryCategory}</p>
                     )}

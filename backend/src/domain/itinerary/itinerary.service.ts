@@ -60,11 +60,20 @@ const formatDateLabel = (date: string): string => {
 const formatTimeLabel = (value?: string | null): string => {
   if (!value) return 'Hora pendiente';
 
-  return new Intl.DateTimeFormat('es-MX', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(value));
+  const match = value.match(/T([01]\d|2[0-3]):([0-5]\d)/);
+  if (match) {
+    return `${match[1]}:${match[2]}`;
+  }
+
+  try {
+    return new Intl.DateTimeFormat('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(value));
+  } catch {
+    return 'Hora pendiente';
+  }
 };
 
 const resolveActivityDateTime = (activity: any, fallbackDate: string): string | null => {
