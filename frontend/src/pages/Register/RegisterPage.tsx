@@ -59,15 +59,87 @@ function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
+const REGISTER_DRAFT_STORAGE_KEY = "ithera_register_step_1_draft";
+const REGISTER_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+
+type RegisterDraft = {
+  form: RegisterForm;
+  savedAt: number;
+  expiresAt: number;
+};
+
+function isRegisterFormDraft(value: unknown): value is RegisterForm {
+  if (!value || typeof value !== "object") return false;
+
+  const draft = value as Partial<Record<keyof RegisterForm, unknown>>;
+  return (
+    typeof draft.name === "string" &&
+    typeof draft.lastNamePaterno === "string" &&
+    typeof draft.lastNameMaterno === "string" &&
+    typeof draft.email === "string" &&
+    typeof draft.password === "string" &&
+    typeof draft.confirmPassword === "string"
+  );
+}
+
+function loadRegisterDraft(): RegisterForm | null {
+  try {
+    const rawDraft = window.localStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
+    if (!rawDraft) return null;
+
+    const parsedDraft = JSON.parse(rawDraft) as Partial<RegisterDraft>;
+    const now = Date.now();
+
+    if (
+      typeof parsedDraft.expiresAt !== "number" ||
+      parsedDraft.expiresAt <= now ||
+      !isRegisterFormDraft(parsedDraft.form)
+    ) {
+      window.localStorage.removeItem(REGISTER_DRAFT_STORAGE_KEY);
+      return null;
+    }
+
+    return parsedDraft.form;
+  } catch {
+    window.localStorage.removeItem(REGISTER_DRAFT_STORAGE_KEY);
+    return null;
+  }
+}
+
+function saveRegisterDraft(form: RegisterForm) {
+  try {
+    const now = Date.now();
+    const draft: RegisterDraft = {
+      form,
+      savedAt: now,
+      expiresAt: now + REGISTER_DRAFT_TTL_MS,
+    };
+
+    window.localStorage.setItem(REGISTER_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Si el navegador no permite almacenamiento local, el registro sigue funcionando sin persistencia temporal.
+  }
+}
+
+function clearRegisterDraft() {
+  try {
+    window.localStorage.removeItem(REGISTER_DRAFT_STORAGE_KEY);
+  } catch {
+    // Sin acción: la limpieza del borrador es auxiliar y no debe bloquear el flujo de registro.
+  }
+}
+
 export function RegisterPage() {
-  const [form, setForm] = useState<RegisterForm>({
-    name: "",
-    lastNamePaterno: "",
-    lastNameMaterno: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [form, setForm] = useState<RegisterForm>(() =>
+    loadRegisterDraft() ?? {
+      name: "",
+      lastNamePaterno: "",
+      lastNameMaterno: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    }
+  );
 
   const [errors, setErrors] = useState<RegisterErrors>({
     name: "",
@@ -105,6 +177,17 @@ export function RegisterPage() {
     !isCheckingEmail &&
     isPasswordValid(form.password) &&
     passwordsMatch;
+
+  useEffect(() => {
+    const hasCapturedData = Object.values(form).some((value) => value.trim().length > 0);
+
+    if (!hasCapturedData) {
+      clearRegisterDraft();
+      return;
+    }
+
+    saveRegisterDraft(form);
+  }, [form]);
 
   const handleChange = (field: keyof RegisterForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -274,6 +357,8 @@ export function RegisterPage() {
         email: normalizeEmail(form.email),
         password: form.password,
       });
+
+      clearRegisterDraft();
 
       if (result.requiresEmailConfirmation) {
         navigate('/otp', { state: { email: normalizeEmail(form.email) } });
