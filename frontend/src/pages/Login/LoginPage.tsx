@@ -4,7 +4,7 @@ import googleIcon from "../../assets/google.png";
 import facebookIcon from "../../assets/facebook.png";
 import { useNavigate, Link, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
-import { ApiError } from "../../services/apiClient";
+import { ApiError, apiClient } from "../../services/apiClient";
 
 const REDIRECT_STORAGE_KEY = "ithera_post_login_redirect";
 const LOGIN_LOCK_STORAGE_KEY = "ithera_login_lockout";
@@ -17,6 +17,25 @@ type StoredLoginLock = {
 
 function normalizeLoginEmail(value: string): string {
   return value.trim().toLowerCase();
+}
+
+type EmailAvailabilityResult = {
+  ok: boolean;
+  available: boolean;
+  code?: string;
+  message?: string;
+};
+
+async function isEmailAvailableForRegistration(emailValue: string): Promise<boolean | null> {
+  try {
+    const result = await apiClient.get<EmailAvailabilityResult>(
+      `/auth/email-availability?email=${encodeURIComponent(normalizeLoginEmail(emailValue))}`,
+    );
+
+    return result.available;
+  } catch {
+    return null;
+  }
 }
 
 function readStoredLoginLock(): StoredLoginLock | null {
@@ -206,6 +225,18 @@ export function LoginPage() {
           }
 
           setLockRemainingSeconds(retryAfterSeconds);
+          setError(err.message);
+          return;
+        }
+
+        if (code === "ERR-11-001" || code === "ERR-11-002") {
+          const emailAvailability = await isEmailAvailableForRegistration(email);
+
+          if (emailAvailability === true || code === "ERR-11-002") {
+            setErrorCode("ERR-11-002");
+            setError("No encontramos una cuenta activa con ese correo. ¿Deseas registrarte?");
+            return;
+          }
         }
 
         setError(err.message);
