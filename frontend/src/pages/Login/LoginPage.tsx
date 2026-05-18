@@ -93,6 +93,9 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isOffline, setIsOffline] = useState(
+    typeof navigator !== "undefined" ? !navigator.onLine : false,
+  );
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const [lockRemainingSeconds, setLockRemainingSeconds] = useState(0);
   const navigate = useNavigate();
@@ -100,6 +103,28 @@ export function LoginPage() {
   const location = useLocation();
   const sessionExpired = (location.state as { sessionExpired?: boolean } | null)?.sessionExpired === true;
   const { login, loginWithGoogle, loginWithFacebook } = useAuth();
+
+  useEffect(() => {
+    const updateNetworkState = () => {
+      const offline = !navigator.onLine;
+      setIsOffline(offline);
+
+      if (offline) {
+        setLoading(false);
+        setError("");
+        setErrorCode(null);
+      }
+    };
+
+    updateNetworkState();
+    window.addEventListener("online", updateNetworkState);
+    window.addEventListener("offline", updateNetworkState);
+
+    return () => {
+      window.removeEventListener("online", updateNetworkState);
+      window.removeEventListener("offline", updateNetworkState);
+    };
+  }, []);
 
   const redirect = getSafeRedirect(
     searchParams.get("redirect") ||
@@ -167,8 +192,30 @@ export function LoginPage() {
     return () => window.clearInterval(timer);
   }, [lockRemainingSeconds]);
 
+  const showOfflineState = () => {
+    setLoading(false);
+    setIsOffline(true);
+    setError("");
+    setErrorCode(null);
+  };
+
+  const isNetworkError = (value: unknown): boolean => {
+    if (!(value instanceof Error)) return false;
+    const message = value.message.toLowerCase();
+    return (
+      message.includes("failed to fetch") ||
+      message.includes("networkerror") ||
+      message.includes("network request failed")
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (isOffline) {
+      showOfflineState();
+      return;
+    }
 
     if (isLoginLocked) {
       setError(
@@ -240,6 +287,11 @@ export function LoginPage() {
         }
 
         setError(err.message);
+        return;
+      }
+
+      if (isNetworkError(err)) {
+        showOfflineState();
         return;
       }
 
@@ -382,6 +434,7 @@ export function LoginPage() {
             <div className="mb-8 grid grid-cols-2 gap-4">
               <button
                 type="button"
+                disabled={isOffline || loading}
                 onClick={async () => {
                   try {
                     setLoading(true);
@@ -395,7 +448,7 @@ export function LoginPage() {
                     setLoading(false);
                   }
                 }}
-                className="flex h-[54px] items-center justify-center gap-3 rounded-[14px] border border-[#D9DEE7] bg-white text-[16px] font-medium text-[#344054] transition hover:border-[#2C8BE6]"
+                className="flex h-[54px] items-center justify-center gap-3 rounded-[14px] border border-[#D9DEE7] bg-white text-[16px] font-medium text-[#344054] transition hover:border-[#2C8BE6] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <img
                   src={googleIcon}
@@ -407,6 +460,7 @@ export function LoginPage() {
 
               <button
                 type="button"
+                disabled={isOffline || loading}
                 onClick={async () => {
                   try {
                     setLoading(true);
@@ -420,7 +474,7 @@ export function LoginPage() {
                     setLoading(false);
                   }
                 }}
-                className="flex h-[54px] items-center justify-center gap-3 rounded-[14px] border border-[#D9DEE7] bg-white text-[16px] font-medium text-[#344054] transition hover:border-[#2C8BE6]"
+                className="flex h-[54px] items-center justify-center gap-3 rounded-[14px] border border-[#D9DEE7] bg-white text-[16px] font-medium text-[#344054] transition hover:border-[#2C8BE6] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <img
                   src={facebookIcon}
@@ -444,6 +498,58 @@ export function LoginPage() {
             {sessionExpired && (
               <div className="mb-5 rounded-xl border border-[#F59E0B]/30 bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
                 Tu sesión expiró. Por favor inicia sesión de nuevo.
+              </div>
+            )}
+
+            {/* Offline banner */}
+            {isOffline && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="mb-5 flex items-start gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#FFFBEB] px-4 py-3 text-sm font-medium text-[#92400E]"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                  className="mt-[1px] shrink-0"
+                >
+                  <path
+                    d="M3 3l18 18"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M2 8.8C7.8 4.2 16.2 4.2 22 8.8"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M5.5 12.3a10.4 10.4 0 0113 0"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M9 15.8a5 5 0 016 0"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M12 19h.01"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span>
+                  Sin conexión. Verifica tu red e inténtalo de nuevo.
+                </span>
               </div>
             )}
 
@@ -606,7 +712,7 @@ export function LoginPage() {
               </div>
 
               {/* Error */}
-              {error && (
+              {error && !isOffline && (
                 <div
                   role="alert"
                   className={`rounded-[12px] border px-3 py-2 text-[12px] font-semibold ${
@@ -657,10 +763,10 @@ export function LoginPage() {
               {/* Submit */}
               <button
                 type="submit"
-                disabled={loading || isLoginLocked || !isLoginFormReady}
+                disabled={loading || isOffline || isLoginLocked || !isLoginFormReady}
                 className="mt-2 h-[54px] w-full rounded-full bg-[linear-gradient(90deg,#7A4FD6_0%,#6D46D4_35%,#6E45E6_65%,#5B35D5_100%)] text-[18px] font-bold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {loading ? "Iniciando sesión..." : isLoginLocked ? `Bloqueado ${lockMinutes}:${lockSeconds}` : "Iniciar sesión"}
+                {loading ? "Iniciando sesión..." : isOffline ? "Sin conexión" : isLoginLocked ? `Bloqueado ${lockMinutes}:${lockSeconds}` : "Iniciar sesión"}
               </button>
 
               {/* Sign-up link */}
