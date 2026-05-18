@@ -1,5 +1,6 @@
 import type { Activity } from '../components/ui/DayView/DayView'
-
+￼￼Intuición
+￼# 
 // ── Día 1: Llegada a Cancún ────────────────────────────────────────────────────
 
 export const DAY1_ACTIVITIES: Activity[] = [
