@@ -101,7 +101,18 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const sessionExpired = (location.state as { sessionExpired?: boolean } | null)?.sessionExpired === true;
+  const rawSessionExpired =
+    (location.state as { sessionExpired?: boolean } | null)?.sessionExpired === true;
+
+  const hasPreviousSession =
+    typeof window !== "undefined" &&
+    Object.keys(localStorage).some((key) =>
+      key.toLowerCase().includes("auth") ||
+      key.toLowerCase().includes("token") ||
+      key.toLowerCase().includes("session"),
+    );
+
+  const sessionExpired = rawSessionExpired && hasPreviousSession;
   const { login, loginWithGoogle, loginWithFacebook } = useAuth();
 
   useEffect(() => {
