@@ -181,15 +181,24 @@ export function LoginPage() {
       navigate(redirect, { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
-        setErrorCode(err.payload?.code ?? null);
+        const payload = err.payload;
+        const code = payload?.code ?? null;
+
+        setErrorCode(code);
+
+        if (code?.startsWith("ERR-11-")) {
+          setPassword("");
+          setShowPassword(false);
+        }
+
         const retryAfterSeconds =
-          typeof err.payload?.retryAfterSeconds === "number"
-            ? err.payload.retryAfterSeconds
+          typeof payload?.retryAfterSeconds === "number"
+            ? payload.retryAfterSeconds
             : 0;
 
-        if (err.payload?.code === "ERR-11-003" && retryAfterSeconds > 0) {
-          const lockedUntil = err.payload.lockedUntil
-            ? Date.parse(err.payload.lockedUntil)
+        if (code === "ERR-11-003" && retryAfterSeconds > 0) {
+          const lockedUntil = payload?.lockedUntil
+            ? Date.parse(payload.lockedUntil)
             : Date.now() + retryAfterSeconds * 1000;
 
           if (!Number.isNaN(lockedUntil)) {
@@ -438,7 +447,7 @@ export function LoginPage() {
                   onBlur={(e) => validateEmail(e.target.value)}
                   placeholder="correo@ejemplo.com"
                   aria-invalid={Boolean(emailError)}
-                  className={`${inputBase} ${emailError || error ? "border-[#EF4444]" : ""}`}
+                  className={`${inputBase} ${emailError || errorCode === "ERR-11-002" ? "border-[#EF4444]" : ""}`}
                 />
                 {emailError && (
                   <p className="mt-1 text-[12px] font-medium text-[#EF4444]">
