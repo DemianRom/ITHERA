@@ -326,6 +326,38 @@ function SectionLabel({
   );
 }
 
+
+function StandardInlineAlert({
+  title,
+  message,
+  tone = "error",
+}: {
+  title: string;
+  message: string;
+  tone?: "error" | "warning" | "info";
+}) {
+  const toneClasses = {
+    error: "border-[#FBC7C7] bg-[#FFF5F5] text-[#C03535]",
+    warning: "border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]",
+    info: "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]",
+  } satisfies Record<string, string>;
+
+  return (
+    <div
+      role="alert"
+      className={`rounded-xl border px-4 py-3 font-body ${toneClasses[tone]}`}
+    >
+      <p className="text-sm font-semibold">{title}</p>
+      <p className="mt-1 text-sm leading-relaxed">{message}</p>
+    </div>
+  );
+}
+
+function getCreateGroupErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return "No se pudo crear el grupo. Inténtalo de nuevo.";
+}
+
 // ── Validation helpers ────────────────────────────────────────────────────────
 const MAX_TRIP_DURATION_DAYS = 60;
 
@@ -533,9 +565,7 @@ export function CreateGroupPage() {
 
       setCreated(true);
     } catch (error) {
-      setServerError(
-        error instanceof Error ? error.message : "No se pudo crear el grupo",
-      );
+      setServerError(getCreateGroupErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -1062,9 +1092,10 @@ export function CreateGroupPage() {
               )}
             </button>
             {serverError && (
-              <p className="mt-3 font-body text-sm text-red-500 text-center">
-                {serverError}
-              </p>
+              <StandardInlineAlert
+                title="No se puede crear el grupo"
+                message={serverError}
+              />
             )}
           </div>
         </div>

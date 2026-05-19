@@ -496,6 +496,105 @@ export const getGroupTravelContext = async (authUserId: string, groupId: string)
   };
 };
 
+
+type TripDateConflict = {
+  id: number;
+  nombre: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+};
+
+const formatTripDate = (value: string): string => value.slice(0, 10);
+
+const dateRangesOverlap = (
+  startA?: string | null,
+  endA?: string | null,
+  startB?: string | null,
+  endB?: string | null
+): boolean => {
+  if (!startA || !endA || !startB || !endB) return false;
+  return formatTripDate(startA) <= formatTripDate(endB) && formatTripDate(endA) >= formatTripDate(startB);
+};
+
+const findUserTripDateConflict = async (
+  usuarioId: string | number,
+  startDate?: string | null,
+  endDate?: string | null,
+  options: { excludeGroupId?: string | number } = {}
+): Promise<TripDateConflict | null> => {
+  if (!startDate || !endDate) return null;
+
+  const { data: memberships, error: membershipError } = await supabase
+    .from('grupo_miembros')
+    .select('grupo_id')
+    .eq('usuario_id', Number(usuarioId));
+
+  if (membershipError) throw new Error(membershipError.message);
+
+  const groupIds = Array.from(new Set((memberships ?? [])
+    .map((membership: any) => Number(membership.grupo_id))
+    .filter((groupId) => Number.isFinite(groupId) && String(groupId) !== String(options.excludeGroupId ?? ''))));
+
+  if (!groupIds.length) return null;
+
+  const { data: groups, error: groupsError } = await supabase
+    .from('grupos_viaje')
+    .select('id, nombre, fecha_inicio, fecha_fin, estado')
+    .in('id', groupIds)
+    .not('fecha_inicio', 'is', null)
+    .not('fecha_fin', 'is', null);
+
+  if (groupsError) throw new Error(groupsError.message);
+
+  const conflicts = (groups ?? [])
+    .filter((group: any) => !isClosedGroupStatus(group.estado))
+    .filter((group: any) => dateRangesOverlap(startDate, endDate, group.fecha_inicio, group.fecha_fin))
+    .sort((a: any, b: any) => formatTripDate(a.fecha_inicio).localeCompare(formatTripDate(b.fecha_inicio)));
+
+  const conflict = conflicts[0];
+  if (!conflict) return null;
+
+  return {
+    id: Number(conflict.id),
+    nombre: String(conflict.nombre ?? 'otro viaje'),
+    fecha_inicio: formatTripDate(String(conflict.fecha_inicio)),
+    fecha_fin: formatTripDate(String(conflict.fecha_fin)),
+  };
+};
+
+const throwTripDateConflict = (
+  conflict: TripDateConflict,
+  action: 'create' | 'join' | 'approve'
+): never => {
+  const actionText = action === 'create'
+    ? 'crear este viaje'
+    : action === 'approve'
+      ? 'aprobar esta solicitud'
+      : 'unirte a este viaje';
+
+  const errorCode = action === 'create' ? 'ERR-23-006' : 'ERR-24-004';
+
+  throw Object.assign(
+    new Error(`${errorCode}: No puedes ${actionText} porque las fechas se cruzan con el viaje "${conflict.nombre}" (${conflict.fecha_inicio} al ${conflict.fecha_fin}). Ajusta las fechas o elige otro viaje.`),
+    {
+      statusCode: 409,
+      code: 'TRIP_DATE_CONFLICT',
+      errorCode,
+      conflict,
+    }
+  );
+};
+
+const ensureUserHasAvailableDates = async (
+  usuarioId: string | number,
+  startDate?: string | null,
+  endDate?: string | null,
+  action: 'create' | 'join' | 'approve' = 'join'
+): Promise<void> => {
+  const conflict = await findUserTripDateConflict(usuarioId, startDate, endDate);
+  if (conflict) throwTripDateConflict(conflict, action);
+};
+
 export const createGroup = async (authUserId: string, payload: CreateGroupPayload) => {
   const usuarioId = await getLocalUserId(authUserId);
   const codigo = await generateUniqueCode();
@@ -517,6 +616,7 @@ export const createGroup = async (authUserId: string, payload: CreateGroupPayloa
   }
 
   validateTripDateRange(payload.fecha_inicio ?? null, payload.fecha_fin ?? null);
+  await ensureUserHasAvailableDates(usuarioId, payload.fecha_inicio ?? null, payload.fecha_fin ?? null, 'create');
 
   const { data: grupo, error: groupError } = await supabase
     .from('grupos_viaje')
@@ -594,6 +694,8 @@ export const joinGroupByCode = async (authUserId: string, payload: JoinGroupPayl
   if (await isGroupAtCapacity(grupo)) {
     throwGroupAtCapacity();
   }
+
+  await ensureUserHasAvailableDates(localUser.id_usuario, grupo.fecha_inicio ?? null, grupo.fecha_fin ?? null, 'join');
 
   const isPublicGroup = grupo.es_publico === true;
 
@@ -1225,6 +1327,8 @@ export const resolveJoinRequest = async (
   if (await isGroupAtCapacity(grupo)) {
     throwGroupAtCapacity();
   }
+
+  await ensureUserHasAvailableDates(request.usuario_id, grupo.fecha_inicio ?? null, grupo.fecha_fin ?? null, 'approve');
 
   const membership = await getMembership(groupId, String(request.usuario_id));
   if (membership) {
