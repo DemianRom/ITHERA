@@ -371,11 +371,18 @@ const applyConfirmedPaymentsToBalances = (
   const next = { ...balances };
   for (const payment of payments) {
     if (normalizePaymentStatus(payment.status) !== 'confirmado') continue;
+
     const from = String(payment.from_user_id);
     const to = String(payment.to_user_id);
     const amount = Number(payment.amount);
-    next[from] = roundMoney((next[from] ?? 0) - amount);
-    next[to] = roundMoney((next[to] ?? 0) + amount);
+
+    /*
+      En el balance base, quien debe tiene saldo negativo y quien debe cobrar
+      tiene saldo positivo. Al confirmar una liquidacion, la deuda del pagador
+      disminuye y el saldo por cobrar del acreedor tambien disminuye.
+    */
+    next[from] = roundMoney((next[from] ?? 0) + amount);
+    next[to] = roundMoney((next[to] ?? 0) - amount);
   }
   return next;
 };
@@ -685,7 +692,12 @@ export const deleteExpense = async (authUserId: string, groupId: string, expense
 };
 
 export const getBalances = async (groupId: string): Promise<Record<string, number>> => {
-  return calculateBalances(await getExpenses(groupId));
+  const [expenses, payments] = await Promise.all([
+    getExpenses(groupId),
+    getSettlementPayments(groupId),
+  ]);
+
+  return applyConfirmedPaymentsToBalances(calculateBalances(expenses), payments);
 };
 
 export const getMinimumSettlements = async (groupId: string) => {
