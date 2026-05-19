@@ -4,7 +4,9 @@ import googleIcon from "../../assets/google.png";
 import facebookIcon from "../../assets/facebook.png";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
-import { ApiError, apiClient } from "../../services/apiClient";
+import { ApiError, apiClient, isNetworkError } from "../../services/apiClient";
+import { useToast } from "../../hooks/useToast";
+import { ToastContainer } from "../../components/ui/Toast/ToastContainer";
 
 type RegisterForm = {
   name: string;
@@ -140,14 +142,6 @@ function clearRegisterDraft() {
   }
 }
 
-function isOfflineError(err: unknown) {
-  if (!navigator.onLine) return true;
-  if (!(err instanceof Error)) return false;
-
-  const technicalMessage = err.message.toLowerCase();
-  return technicalMessage.includes("failed to fetch") || technicalMessage.includes("networkerror");
-}
-
 export function RegisterPage() {
   const [form, setForm] = useState<RegisterForm>(() => loadRegisterDraft() ?? getEmptyRegisterForm());
 
@@ -171,6 +165,7 @@ export function RegisterPage() {
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const navigate = useNavigate();
   const { register, loginWithGoogle, loginWithFacebook } = useAuth();
+  const { toasts, show: showToast, dismiss: dismissToast } = useToast();
 
   const passwordChecks = useMemo(() => getPasswordChecks(form.password), [form.password]);
   const passwordStrength = useMemo(() => getPasswordStrength(form.password), [form.password]);
@@ -279,29 +274,34 @@ export function RegisterPage() {
       setErrors((prev) => ({ ...prev, email: "" }));
       return true;
     } catch (err) {
+      if (normalizeEmail(form.email) !== normalizedEmail) return false;
+
+      // ERR-NET-02: sin conexión → toast amigable + conservar borrador (ya guardado por el useEffect)
+      if (isNetworkError(err)) {
+        showToast(
+          "Sin conexión a internet. Tus datos han sido guardados temporalmente. Podrás continuar cuando recuperes la conexión.",
+          "warning",
+          7000,
+        );
+        setIsEmailAvailable(null);
+        return false;
+      }
+
       const message =
         err instanceof ApiError && err.payload?.code === "ERR-12-004"
           ? "Ese correo ya está asociado a una cuenta activa. ¿Deseas iniciar sesión?"
-          : isOfflineError(err)
-            ? "Sin conexión. Tus datos se guardan temporalmente para continuar cuando vuelvas a tener internet."
-            : "No se pudo verificar el correo. Inténtalo de nuevo.";
+          : "No se pudo verificar el correo. Inténtalo de nuevo.";
 
       if (normalizeEmail(form.email) !== normalizedEmail) return false;
 
-      if (isOfflineError(err)) {
-        setIsEmailAvailable(null);
-        setIsSuccessMessage(true);
-        setServerMessage(message);
-      } else {
-        setIsEmailAvailable(false);
-        setErrors((prev) => ({ ...prev, email: message }));
-      }
+      setIsEmailAvailable(false);
+      setErrors((prev) => ({ ...prev, email: message }));
 
       return false;
     } finally {
       setIsCheckingEmail(false);
     }
-  }, [form.email, validateEmailFormat]);
+  }, [form.email, validateEmailFormat, showToast]);
 
   useEffect(() => {
     if (!isOnline || !normalizedEmail || !EMAIL_REGEX.test(normalizedEmail)) return;
@@ -409,14 +409,21 @@ export function RegisterPage() {
 
       navigate("/my-trips");
     } catch (err) {
-      const message = isOfflineError(err)
-        ? "Sin conexión. Tus datos se guardan temporalmente para continuar cuando vuelvas a tener internet."
-        : err instanceof Error
-          ? err.message
-          : "No se pudo registrar la cuenta";
-
-      setIsSuccessMessage(isOfflineError(err));
-      setServerMessage(message);
+      // ERR-NET-02: sin conexión → toast amigable + conservar borrador
+      if (isNetworkError(err)) {
+        showToast(
+          "Sin conexión a internet. Tus datos han sido guardados temporalmente. Podrás continuar cuando recuperes la conexión.",
+          "warning",
+          7000,
+        );
+      } else {
+        const message =
+          err instanceof ApiError
+            ? (err.payload?.error ?? err.message)
+            : "No se pudo registrar la cuenta. Inténtalo de nuevo.";
+        setIsSuccessMessage(false);
+        setServerMessage(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -433,6 +440,7 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6F8] font-body">
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[45%_55%]">
         <section
           className="relative hidden overflow-hidden lg:flex"
