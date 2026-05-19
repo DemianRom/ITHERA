@@ -301,7 +301,7 @@ export function RegisterPage() {
     } finally {
       setIsCheckingEmail(false);
     }
-  }, [form.email, validateEmailFormat]);
+  }, [form.email, validateEmailFormat, showToast]);
 
   useEffect(() => {
     if (!isOnline || !normalizedEmail || !EMAIL_REGEX.test(normalizedEmail)) return;
