@@ -70,6 +70,17 @@ type RegisterDraft = {
   expiresAt: number;
 };
 
+function getEmptyRegisterForm(): RegisterForm {
+  return {
+    name: "",
+    lastNamePaterno: "",
+    lastNameMaterno: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  };
+}
+
 function isRegisterFormDraft(value: unknown): value is RegisterForm {
   if (!value || typeof value !== "object") return false;
 
@@ -119,7 +130,7 @@ function saveRegisterDraft(form: RegisterForm) {
 
     window.localStorage.setItem(REGISTER_DRAFT_STORAGE_KEY, JSON.stringify(draft));
   } catch {
-    // Si el navegador no permite almacenamiento local, el registro sigue funcionando sin persistencia temporal.
+    // La persistencia temporal es auxiliar; si falla, el flujo principal no debe bloquearse.
   }
 }
 
@@ -127,21 +138,12 @@ function clearRegisterDraft() {
   try {
     window.localStorage.removeItem(REGISTER_DRAFT_STORAGE_KEY);
   } catch {
-    // Sin acción: la limpieza del borrador es auxiliar y no debe bloquear el flujo de registro.
+    // Sin acción: limpiar el borrador no debe interrumpir el registro.
   }
 }
 
 export function RegisterPage() {
-  const [form, setForm] = useState<RegisterForm>(() =>
-    loadRegisterDraft() ?? {
-      name: "",
-      lastNamePaterno: "",
-      lastNameMaterno: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    }
-  );
+  const [form, setForm] = useState<RegisterForm>(() => loadRegisterDraft() ?? getEmptyRegisterForm());
 
   const [errors, setErrors] = useState<RegisterErrors>({
     name: "",
@@ -160,6 +162,7 @@ export function RegisterPage() {
   const [isSuccessMessage, setIsSuccessMessage] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isEmailAvailable, setIsEmailAvailable] = useState<boolean | null>(null);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const navigate = useNavigate();
   const { register, loginWithGoogle, loginWithFacebook } = useAuth();
   const { toasts, show: showToast, dismiss: dismissToast } = useToast();
@@ -180,6 +183,18 @@ export function RegisterPage() {
     !isCheckingEmail &&
     isPasswordValid(form.password) &&
     passwordsMatch;
+
+  useEffect(() => {
+    const updateNetworkState = () => setIsOnline(navigator.onLine);
+
+    window.addEventListener("online", updateNetworkState);
+    window.addEventListener("offline", updateNetworkState);
+
+    return () => {
+      window.removeEventListener("online", updateNetworkState);
+      window.removeEventListener("offline", updateNetworkState);
+    };
+  }, []);
 
   useEffect(() => {
     const hasCapturedData = Object.values(form).some((value) => value.trim().length > 0);
@@ -230,6 +245,13 @@ export function RegisterPage() {
 
     if (!validateEmailFormat(value)) return false;
 
+    if (!navigator.onLine) {
+      setIsEmailAvailable(null);
+      setServerMessage("Sin conexión. Tus datos se guardan temporalmente para continuar cuando vuelvas a tener internet.");
+      setIsSuccessMessage(true);
+      return false;
+    }
+
     setIsCheckingEmail(true);
 
     try {
@@ -270,8 +292,11 @@ export function RegisterPage() {
           ? "Ese correo ya está asociado a una cuenta activa. ¿Deseas iniciar sesión?"
           : "No se pudo verificar el correo. Inténtalo de nuevo.";
 
+      if (normalizeEmail(form.email) !== normalizedEmail) return false;
+
       setIsEmailAvailable(false);
       setErrors((prev) => ({ ...prev, email: message }));
+
       return false;
     } finally {
       setIsCheckingEmail(false);
@@ -279,14 +304,14 @@ export function RegisterPage() {
   }, [form.email, validateEmailFormat]);
 
   useEffect(() => {
-    if (!normalizedEmail || !EMAIL_REGEX.test(normalizedEmail)) return;
+    if (!isOnline || !normalizedEmail || !EMAIL_REGEX.test(normalizedEmail)) return;
 
     const timer = window.setTimeout(() => {
       void checkEmailAvailability(normalizedEmail);
     }, 600);
 
     return () => window.clearTimeout(timer);
-  }, [normalizedEmail, checkEmailAvailability]);
+  }, [isOnline, normalizedEmail, checkEmailAvailability]);
 
   const validate = () => {
     const newErrors: RegisterErrors = {
@@ -356,6 +381,13 @@ export function RegisterPage() {
 
     if (!validate()) return;
 
+    if (!navigator.onLine) {
+      saveRegisterDraft(form);
+      setIsSuccessMessage(true);
+      setServerMessage("Sin conexión. Tus datos se guardan temporalmente para continuar cuando vuelvas a tener internet.");
+      return;
+    }
+
     const emailAvailable = await checkEmailAvailability(form.email);
     if (!emailAvailable) return;
 
@@ -369,8 +401,6 @@ export function RegisterPage() {
         email: normalizeEmail(form.email),
         password: form.password,
       });
-
-      clearRegisterDraft();
 
       if (result.requiresEmailConfirmation) {
         navigate('/otp', { state: { email: normalizeEmail(form.email) } });
@@ -509,6 +539,13 @@ export function RegisterPage() {
               <span className="text-[14px] text-[#98A2B3]">o continúa con tu correo</span>
               <div className="h-px flex-1 bg-[#E4E7EC]" />
             </div>
+
+            {!isOnline && (
+              <div className="mb-5 rounded-xl border border-[#FED7AA] bg-[#FFF7ED] px-4 py-3 text-[#B45309]">
+                <p className="text-sm font-semibold">Sin conexión</p>
+                <p className="text-sm">Tus datos se guardan temporalmente. Podrás continuar cuando vuelvas a tener internet.</p>
+              </div>
+            )}
 
             {serverMessage && (
               <div
