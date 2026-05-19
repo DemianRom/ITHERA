@@ -19,6 +19,21 @@ function useCountUp(target: number, duration = 1500) {
   return count
 }
 
+function useIsOnline() {
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine)
+  useEffect(() => {
+    const setOnline = () => setIsOnline(true)
+    const setOffline = () => setIsOnline(false)
+    window.addEventListener('online', setOnline)
+    window.addEventListener('offline', setOffline)
+    return () => {
+      window.removeEventListener('online', setOnline)
+      window.removeEventListener('offline', setOffline)
+    }
+  }, [])
+  return isOnline
+}
+
 function useFadeIn() {
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -87,7 +102,36 @@ function LandingNavbar() {
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
 
-function HeroSection() {
+// ── Offline Banner ───────────────────────────────────────────────────────────
+
+function OfflineBanner() {
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-center gap-3 bg-[#FFF7ED] border-b border-[#FED7AA] px-4 py-2.5 shadow-sm"
+    >
+      {/* WiFi-off icon */}
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[#B45309] shrink-0">
+        <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M10.71 5.05A16 16 0 0 1 22.56 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="12" cy="20" r="1" fill="currentColor" />
+      </svg>
+      <p className="font-body text-sm font-semibold text-[#B45309]">
+        Sin conexión a internet
+      </p>
+      <span className="font-body text-sm text-[#92400E]">
+        — Algunas acciones no estarán disponibles hasta recuperar la señal.
+      </span>
+    </div>
+  )
+}
+
+function HeroSection({ isOnline }: { isOnline: boolean }) {
   const [tripName, setTripName] = useState('')
   const [dates, setDates] = useState('')
   const [people, setPeople] = useState('2')
@@ -159,10 +203,18 @@ function HeroSection() {
 
       {/* CTAs */}
       <div className="relative flex flex-col sm:flex-row items-center gap-3 mb-4">
-        <button onClick={() => navigate('/create-group')} className="font-body font-medium text-sm bg-green text-white rounded-lg px-6 py-3 hover:opacity-90 transition-opacity">
+        <button
+          onClick={() => isOnline && navigate('/create-group')}
+          disabled={!isOnline}
+          title={!isOnline ? 'Sin conexión a internet' : undefined}
+          className="font-body font-medium text-sm bg-green text-white rounded-lg px-6 py-3 hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           Crear mi primer viaje
         </button>
-        <button onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })} className="font-body font-medium text-sm border border-[rgba(255,255,255,0.35)] text-white rounded-lg px-6 py-3 hover:bg-white/10 transition-colors">
+        <button
+          onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}
+          className="font-body font-medium text-sm border border-[rgba(255,255,255,0.35)] text-white rounded-lg px-6 py-3 hover:bg-white/10 transition-colors"
+        >
           Ver cómo funciona
         </button>
       </div>
@@ -220,7 +272,12 @@ function HeroSection() {
             className="font-body text-base text-primary-dark placeholder-gray-400 outline-none w-full bg-transparent font-medium"
           />
         </div>
-        <button onClick={handleCreateItinerary} className="font-body font-bold text-base bg-gradient-to-r from-[#1E6FD9] to-[#7A4FD6] text-white rounded-xl px-8 py-3 hover:opacity-90 hover:shadow-[0_8px_20px_-6px_rgba(30,111,217,0.5)] transition-all duration-300 whitespace-nowrap flex items-center justify-center gap-2">
+        <button
+          onClick={isOnline ? handleCreateItinerary : undefined}
+          disabled={!isOnline}
+          title={!isOnline ? 'Sin conexión a internet' : undefined}
+          className="font-body font-bold text-base bg-gradient-to-r from-[#1E6FD9] to-[#7A4FD6] text-white rounded-xl px-8 py-3 hover:opacity-90 hover:shadow-[0_8px_20px_-6px_rgba(30,111,217,0.5)] transition-all duration-300 whitespace-nowrap flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           Crear Itinerario
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 5l7 7-7 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
@@ -797,10 +854,12 @@ function Footer() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function LandingPage() {
+  const isOnline = useIsOnline()
   return (
-    <div className="font-body">
+    <div className={`font-body${!isOnline ? ' pt-[44px]' : ''}`}>
+      {!isOnline && <OfflineBanner />}
       <Navbar variant="landing" />
-      <HeroSection />
+      <HeroSection isOnline={isOnline} />
       <StatsSection />
       <FeaturesSection />
       <DemoSection />
