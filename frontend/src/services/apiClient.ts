@@ -34,6 +34,25 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Determina si un error capturado corresponde a un fallo de red (sin conexión,
+ * servidor inalcanzable o timeout de fetch), distinto de un error HTTP normal.
+ * Usado para implementar el comportamiento ERR-NET-02.
+ */
+export function isNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  // TypeError es lo que lanza fetch cuando no hay red ("Failed to fetch", "NetworkError", etc.)
+  if (!(err instanceof TypeError)) return false;
+  // Verificación adicional por nombre de mensaje para mayor robustez entre navegadores
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes("failed to fetch") ||
+    msg.includes("network") ||
+    msg.includes("networkerror") ||
+    !navigator.onLine
+  );
+}
+
 async function parseResponseBody(response: Response): Promise<ParsedBody> {
   const contentType = response.headers.get("content-type") ?? "";
   const isJson = contentType.toLowerCase().includes("application/json");
