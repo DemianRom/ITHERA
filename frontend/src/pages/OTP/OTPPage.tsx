@@ -5,6 +5,8 @@ import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/useAuth";
 
 const TOTAL_SECONDS = 600;
+const RESEND_COOLDOWN_SECONDS = 60;
+const MAX_RESEND_ATTEMPTS = 3;
 
 export function OTPPage() {
   const navigate = useNavigate();
@@ -18,6 +20,12 @@ export function OTPPage() {
   const [verified, setVerified] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS);
   const [resending, setResending] = useState(false);
+  const [attemptsLeft, setAttemptsLeft] = useState(3);
+  const [otpLocked, setOtpLocked] = useState(false);
+  const [shakeOtp, setShakeOtp] = useState(false);
+  const [showSpamHelp, setShowSpamHelp] = useState(false);
+  const [resendCooldownLeft, setResendCooldownLeft] = useState(0);
+  const [resendAttemptsUsed, setResendAttemptsUsed] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
 
   useEffect(() => {
@@ -35,11 +43,26 @@ export function OTPPage() {
 
   useEffect(() => {
     if (secondsLeft <= 0) return;
-    const id = setInterval(() => {
+    const id = window.setInterval(() => {
       setSecondsLeft((s) => (s <= 1 ? 0 : s - 1));
     }, 1000);
-    return () => clearInterval(id);
+    return () => window.clearInterval(id);
   }, [secondsLeft]);
+
+  useEffect(() => {
+    if (resendCooldownLeft <= 0) return;
+    const id = window.setInterval(() => {
+      setResendCooldownLeft((seconds) => (seconds <= 1 ? 0 : seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [resendCooldownLeft]);
+
+  useEffect(() => {
+    if (secondsLeft > 0 || verified) return;
+
+    setDigits(Array(6).fill(""));
+    setError("El código ha expirado. Solicita uno nuevo para continuar.");
+  }, [secondsLeft, verified]);
 
   const formatTime = (secs: number): string => {
     const m = Math.floor(secs / 60).toString().padStart(2, "0");
@@ -48,8 +71,15 @@ export function OTPPage() {
   };
 
   const isComplete = digits.every((d) => d !== "");
+  const otpExpired = secondsLeft <= 0;
+  const resendAttemptsLeft = Math.max(0, MAX_RESEND_ATTEMPTS - resendAttemptsUsed);
+  const resendLimitReached = resendAttemptsLeft <= 0;
+  const canRequestNewCode = (otpExpired || otpLocked) && !resending && resendCooldownLeft <= 0 && !resendLimitReached;
+  const inputsDisabled = loading || verified || otpLocked || otpExpired;
 
   const distributeDigits = (text: string, startIndex: number) => {
+    if (inputsDisabled) return;
+
     const clean = text.replace(/\D/g, "").slice(0, 6 - startIndex);
     if (!clean) return;
     const next = [...digits];
@@ -62,6 +92,8 @@ export function OTPPage() {
   };
 
   const handleChange = (index: number, value: string) => {
+    if (inputsDisabled) return;
+
     if (value.length > 1) {
       distributeDigits(value, index);
       return;
@@ -77,6 +109,8 @@ export function OTPPage() {
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (inputsDisabled) return;
+
     if (e.key === "Backspace") {
       if (digits[index]) {
         const next = [...digits];
@@ -91,8 +125,26 @@ export function OTPPage() {
     }
   };
 
+  const triggerOtpErrorAnimation = () => {
+    setShakeOtp(false);
+    window.setTimeout(() => setShakeOtp(true), 0);
+    window.setTimeout(() => setShakeOtp(false), 450);
+  };
+
+  const clearOtpInputsForRetry = () => {
+    setDigits(Array(6).fill(""));
+    window.setTimeout(() => inputRefs.current[0]?.focus(), 0);
+  };
+
   const handleSubmit = async () => {
-    if (!isComplete || loading) return;
+    if (!isComplete || loading || inputsDisabled) return;
+
+    if (otpExpired) {
+      setError("El código ha expirado. Solicita uno nuevo para continuar.");
+      clearOtpInputsForRetry();
+      return;
+    }
+
     setError("");
     try {
       setLoading(true);
@@ -103,16 +155,36 @@ export function OTPPage() {
       });
       if (otpError) throw otpError;
       setVerified(true);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Código inválido o expirado.";
-      setError(msg);
+    } catch {
+      const nextAttemptsLeft = Math.max(0, attemptsLeft - 1);
+
+      setAttemptsLeft(nextAttemptsLeft);
+      triggerOtpErrorAnimation();
+      clearOtpInputsForRetry();
+
+      if (nextAttemptsLeft <= 0) {
+        setOtpLocked(true);
+        setError(
+          "Has alcanzado el límite de intentos. El código fue invalidado. Solicita uno nuevo."
+        );
+      } else {
+        setError(
+          `Código incorrecto. Te ${nextAttemptsLeft === 1 ? "queda" : "quedan"} ${nextAttemptsLeft} ${
+            nextAttemptsLeft === 1 ? "intento" : "intentos"
+          } antes de que sea invalidado.`
+        );
+      }
+
       setLoading(false);
     }
   };
 
   const handleResend = async () => {
-    if (secondsLeft > 0 || resending) return;
+    if (!canRequestNewCode) return;
+
     setError("");
+    setResendCooldownLeft(RESEND_COOLDOWN_SECONDS);
+
     try {
       setResending(true);
       const { error: resendError } = await supabase.auth.resend({
@@ -120,12 +192,21 @@ export function OTPPage() {
         type: "signup",
       });
       if (resendError) throw resendError;
+
       setDigits(Array(6).fill(""));
+      setAttemptsLeft(3);
+      setOtpLocked(false);
+      setShakeOtp(false);
       setSecondsLeft(TOTAL_SECONDS);
-      inputRefs.current[0]?.focus();
+      setResendAttemptsUsed((current) => current + 1);
+      window.setTimeout(() => inputRefs.current[0]?.focus(), 0);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "No se pudo reenviar el código.";
-      setError(msg);
+      const isNetworkError = !navigator.onLine || (err instanceof Error && err.message.toLowerCase().includes("failed to fetch"));
+      setError(
+        isNetworkError
+          ? "Sin conexión. No se pudo reenviar el código. Inténtalo de nuevo cuando recuperes internet."
+          : "No se pudo reenviar el código. Inténtalo de nuevo en unos segundos."
+      );
     } finally {
       setResending(false);
     }
@@ -140,6 +221,7 @@ export function OTPPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6F8] font-body">
+      <style>{`@keyframes otp-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }`}</style>
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[45%_55%]">
         {/* ── Left panel ── */}
         <section
@@ -211,7 +293,7 @@ export function OTPPage() {
             </p>
 
             {/* OTP inputs */}
-            <div className="mb-2 flex justify-center gap-3">
+            <div className={`mb-2 flex justify-center gap-3 ${shakeOtp ? "animate-[otp-shake_0.42s_ease-in-out]" : ""}`}>
               {digits.map((digit, i) => (
                 <input
                   key={i}
@@ -230,7 +312,9 @@ export function OTPPage() {
                     e.preventDefault();
                     distributeDigits(e.clipboardData.getData("text"), i);
                   }}
-                  className={`${inputBase} ${error ? "border-[#EF4444]" : ""}`}
+                  disabled={inputsDisabled}
+                  aria-invalid={Boolean(error)}
+                  className={`${inputBase} ${error ? "border-[#EF4444]" : ""} disabled:cursor-not-allowed disabled:bg-[#F2F4F7] disabled:text-[#98A2B3]`}
                 />
               ))}
             </div>
@@ -273,7 +357,7 @@ export function OTPPage() {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!isComplete || loading || verified}
+              disabled={!isComplete || loading || verified || otpLocked || otpExpired}
               className="h-[54px] w-full rounded-full bg-[linear-gradient(90deg,#7A4FD6_0%,#6D46D4_35%,#6E45E6_65%,#5B35D5_100%)] text-[18px] font-bold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading || verified ? "Verificando..." : "Verificar"}
@@ -284,22 +368,50 @@ export function OTPPage() {
               <button
                 type="button"
                 onClick={handleResend}
-                disabled={secondsLeft > 0 || resending}
+                disabled={!canRequestNewCode}
                 className={`text-[14px] font-medium transition ${
-                  secondsLeft > 0 || resending
-                    ? "cursor-not-allowed text-[#C4C9D4]"
-                    : "text-[#7A4FD6] hover:opacity-80"
+                  canRequestNewCode
+                    ? "text-[#7A4FD6] hover:opacity-80"
+                    : "cursor-not-allowed text-[#C4C9D4]"
                 }`}
               >
                 {resending ? "Reenviando..." : "Reenviar código"}
               </button>
 
-              <a
-                href="mailto:"
+              <p className="text-center text-[12px] leading-[1.5] text-[#98A2B3]">
+                {resendLimitReached
+                  ? "Alcanzaste el límite de reenvíos. Regresa al registro para iniciar nuevamente."
+                  : resendCooldownLeft > 0
+                    ? `Podrás solicitar otro código en ${formatTime(resendCooldownLeft)}.`
+                    : secondsLeft > 0 && !otpLocked
+                      ? `Podrás reenviar el código cuando expire el contador (${formatTime(secondsLeft)}).`
+                      : `Reenvíos disponibles: ${resendAttemptsLeft}.`}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setShowSpamHelp((current) => !current)}
                 className="text-[13px] text-[#98A2B3] underline transition hover:text-[#667085]"
+                aria-expanded={showSpamHelp}
+                aria-controls="spam-help"
               >
                 ¿Código en spam?
-              </a>
+              </button>
+
+              {showSpamHelp && (
+                <div
+                  id="spam-help"
+                  className="mt-2 w-full rounded-2xl border border-[#D9DEE7] bg-white p-4 text-left text-[13px] leading-[1.6] text-[#475467] shadow-sm"
+                >
+                  <p className="font-semibold text-[#344054]">Revisa estas opciones:</p>
+                  <ol className="mt-2 list-decimal space-y-1 pl-5">
+                    <li>Busca un correo de ITHERA en tu bandeja de entrada.</li>
+                    <li>Revisa la carpeta de spam, correo no deseado o promociones.</li>
+                    <li>Verifica que el correo mostrado arriba esté escrito correctamente.</li>
+                    <li>Si no aparece, espera a que termine el contador y solicita un nuevo código.</li>
+                  </ol>
+                </div>
+              )}
             </div>
           </div>
         </section>
