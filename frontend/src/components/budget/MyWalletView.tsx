@@ -287,8 +287,11 @@ export const MyWalletView: FC<Props> = ({
       <div className="flex flex-1 flex-col gap-4 px-6 py-5">
         {error && <div className="rounded-xl border border-[#FBC7C7] bg-[#FFF5F5] px-4 py-3 text-sm text-[#C03535]">{error}</div>}
         {isReadOnly && (
-          <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
-            Estas en modo solo lectura (sin conexion). Puedes consultar datos sincronizados, pero no modificar pagos.
+          <div role="status" className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-[#92400E]">
+            <p className="text-sm font-semibold">Sin conexión</p>
+            <p className="mt-1 text-sm leading-relaxed">
+              Mi cartera está en modo solo lectura. Puedes consultar el último estado sincronizado, pero no modificar pagos.
+            </p>
           </div>
         )}
 

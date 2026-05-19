@@ -5,6 +5,38 @@ import { useAuth } from "../../context/useAuth";
 import { groupsService, saveCurrentGroup } from "../../services/groups";
 import type { InvitePreview } from "../../types/groups";
 
+
+function StandardInlineAlert({
+  title,
+  message,
+  tone = "error",
+}: {
+  title: string;
+  message: string;
+  tone?: "error" | "warning" | "info";
+}) {
+  const toneClasses = {
+    error: "border-[#FBC7C7] bg-[#FFF5F5] text-[#C03535]",
+    warning: "border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]",
+    info: "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]",
+  } satisfies Record<string, string>;
+
+  return (
+    <div
+      role="alert"
+      className={`rounded-xl border px-4 py-3 font-body ${toneClasses[tone]}`}
+    >
+      <p className="text-sm font-semibold">{title}</p>
+      <p className="mt-1 text-sm leading-relaxed">{message}</p>
+    </div>
+  );
+}
+
+function getJoinGroupErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return "No se pudo aceptar la invitación. Inténtalo de nuevo.";
+}
+
 export function JoinGroupPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -16,6 +48,7 @@ export function JoinGroupPage() {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState("");
+  const [joinError, setJoinError] = useState("");
   const [requestPending, setRequestPending] = useState(false);
 
   useEffect(() => {
@@ -29,6 +62,7 @@ export function JoinGroupPage() {
       try {
         setLoading(true);
         setError("");
+        setJoinError("");
 
         const response = await groupsService.getInvitePreview(code);
         setPreview(response.preview);
@@ -56,7 +90,7 @@ export function JoinGroupPage() {
 
     try {
       setJoining(true);
-      setError("");
+      setJoinError("");
 
       const response = await groupsService.joinGroup(code, accessToken);
 
@@ -69,11 +103,7 @@ export function JoinGroupPage() {
 
       navigate(`/grouppanel?groupId=${encodeURIComponent(response.group.id)}`);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "No se pudo aceptar la invitación.",
-      );
+      setJoinError(getJoinGroupErrorMessage(err));
     } finally {
       setJoining(false);
     }
@@ -217,6 +247,15 @@ export function JoinGroupPage() {
                 <p className="mt-4 rounded-xl bg-[#FFF8E6] px-4 py-3 text-sm text-[#8A5A00]">
                   Para aceptar la invitación necesitas iniciar sesión.
                 </p>
+              )}
+
+              {joinError && (
+                <div className="mt-4">
+                  <StandardInlineAlert
+                    title="No se puede completar la unión"
+                    message={joinError}
+                  />
+                </div>
               )}
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">

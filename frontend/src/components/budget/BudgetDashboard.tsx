@@ -1047,8 +1047,11 @@ export const BudgetDashboard: FC<Props> = ({
 
       <div className="flex flex-1 flex-col gap-4 px-6 py-5">
         {isOffline && (
-          <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 font-body text-sm text-[#92400E]">
-            Sin conexion: finanzas esta en modo solo lectura con el ultimo estado sincronizado.
+          <div role="status" className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 font-body text-[#92400E]">
+            <p className="text-sm font-semibold">Sin conexión</p>
+            <p className="mt-1 text-sm leading-relaxed">
+              Finanzas está en modo solo lectura. Puedes consultar el último estado sincronizado, pero no modificar gastos ni pagos.
+            </p>
           </div>
         )}
         <div className="flex gap-3">
