@@ -132,6 +132,7 @@ export function OTPPage() {
   };
 
   const timerRed = secondsLeft < 60;
+  const timerProgress = Math.max(0, Math.min(100, (secondsLeft / TOTAL_SECONDS) * 100));
   const inputBase =
     "w-12 h-14 rounded-[14px] border border-[#D9DEE7] bg-white text-center text-[22px] font-bold text-[#111827] outline-none transition focus:border-[#1E6FD9] focus:ring-2 focus:ring-[#1E6FD9]/15 caret-transparent select-none";
 
@@ -235,15 +236,31 @@ export function OTPPage() {
             </div>
 
             {/* Timer */}
-            <p
-              className={`mb-4 text-center text-[13px] font-medium ${
-                timerRed ? "text-[#EF4444]" : "text-[#667085]"
-              }`}
-            >
-              {secondsLeft > 0
-                ? `El código expira en ${formatTime(secondsLeft)}`
-                : "El código ha expirado"}
-            </p>
+            <div className="mb-4">
+              <p
+                className={`text-center text-[13px] font-medium ${
+                  timerRed ? "text-[#EF4444]" : "text-[#667085]"
+                }`}
+              >
+                {secondsLeft > 0
+                  ? `El código expira en ${formatTime(secondsLeft)}`
+                  : "El código ha expirado"}
+              </p>
+
+              <div
+                className="mt-3 h-2 overflow-hidden rounded-full bg-[#E4E7EC]"
+                role="progressbar"
+                aria-label="Tiempo restante del código OTP"
+                aria-valuemin={0}
+                aria-valuemax={TOTAL_SECONDS}
+                aria-valuenow={secondsLeft}
+              >
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${timerRed ? "bg-[#EF4444]" : "bg-[#7A4FD6]"}`}
+                  style={{ width: `${timerProgress}%` }}
+                />
+              </div>
+            </div>
 
             {/* Inline error */}
             {error && (
